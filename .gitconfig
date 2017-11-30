@@ -1,6 +1,11 @@
 [remote "matplotlib"]
     url = https://github.com/matplotlib/matplotlib.git
     fetch = +refs/heads/*:refs/remotes/matplotlib/*
+[remote "github"]
+    url = git@github.com:huangyingw/matplotlib.git
+    fetch = +refs/heads/*:refs/remotes/github/*
+[push]
+    remote = github
 [gsync]
     remote = matplotlib
     branch = master
