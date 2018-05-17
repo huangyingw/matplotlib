@@ -9,3 +9,8 @@
 [gsync]
     remote = matplotlib
     branch = master
+[commit]
+    message = n
+[branch "dev"]
+    remote = github
+    merge = refs/heads/dev
