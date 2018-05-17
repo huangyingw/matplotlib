@@ -1,13 +1,9 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-import six
-
-import matplotlib
 import inspect
+import logging
 import traceback
 import warnings
-import logging
+
+import matplotlib
 
 _log = logging.getLogger(__name__)
 
@@ -28,7 +24,7 @@ def pylab_setup(name=None):
     ----------
     name : str, optional
         The name of the backend to use.  If `None`, falls back to
-        ``matplotlib.get_backend()`` (which return ``rcParams['backend']``)
+        ``matplotlib.get_backend()`` (which return :rc:`backend`).
 
     Returns
     -------
@@ -87,7 +83,7 @@ or with matplotlib.use()""" %
     draw_if_interactive = getattr(backend_mod, 'draw_if_interactive',
                                   do_nothing)
 
-    _log.info('backend %s version %s' % (name, backend_version))
+    _log.debug('backend %s version %s', name, backend_version)
 
     # need to keep a global reference to the backend for compatibility
     # reasons. See https://github.com/matplotlib/matplotlib/issues/6092

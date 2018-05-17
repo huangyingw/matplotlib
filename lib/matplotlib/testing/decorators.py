@@ -1,15 +1,12 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-import six
-
+from distutils.version import StrictVersion
 import functools
 import inspect
 import os
-import sys
+from pathlib import Path
 import shutil
-import warnings
+import sys
 import unittest
+import warnings
 
 # Note - don't import nose up here - import it only as needed in functions.
 # This allows other functions here to be used by pytest-based testing suites
@@ -24,41 +21,10 @@ from matplotlib import cbook
 from matplotlib import ticker
 from matplotlib import pyplot as plt
 from matplotlib import ft2font
-from matplotlib.testing.compare import comparable_formats, compare_images, \
-     make_test_filename
-from . import _copy_metadata, is_called_from_pytest
+from matplotlib.testing.compare import (
+    comparable_formats, compare_images, make_test_filename)
+from . import is_called_from_pytest
 from .exceptions import ImageComparisonFailure
-
-
-def _knownfailureif(fail_condition, msg=None, known_exception_class=None):
-    """
-
-    Assume a will fail if *fail_condition* is True. *fail_condition*
-    may also be False or the string 'indeterminate'.
-
-    *msg* is the error message displayed for the test.
-
-    If *known_exception_class* is not None, the failure is only known
-    if the exception is an instance of this class. (Default = None)
-
-    """
-    if is_called_from_pytest():
-        import pytest
-        if fail_condition == 'indeterminate':
-            fail_condition, strict = True, False
-        else:
-            fail_condition, strict = bool(fail_condition), True
-        return pytest.mark.xfail(condition=fail_condition, reason=msg,
-                                 raises=known_exception_class, strict=strict)
-    else:
-        from ._nose.decorators import knownfailureif
-        return knownfailureif(fail_condition, msg, known_exception_class)
-
-
-@cbook.deprecated('2.1',
-                  alternative='pytest.xfail or import the plugin')
-def knownfailureif(fail_condition, msg=None, known_exception_class=None):
-    _knownfailureif(fail_condition, msg, known_exception_class)
 
 
 def _do_cleanup(original_units_registry, original_settings):
@@ -127,11 +93,9 @@ def cleanup(style=None):
                 original_settings = mpl.rcParams.copy()
                 matplotlib.style.use(style)
                 try:
-                    for yielded in func(*args, **kwargs):
-                        yield yielded
+                    yield from func(*args, **kwargs)
                 finally:
-                    _do_cleanup(original_units_registry,
-                                original_settings)
+                    _do_cleanup(original_units_registry, original_settings)
         else:
             @functools.wraps(func)
             def wrapped_callable(*args, **kwargs):
@@ -141,12 +105,11 @@ def cleanup(style=None):
                 try:
                     func(*args, **kwargs)
                 finally:
-                    _do_cleanup(original_units_registry,
-                                original_settings)
+                    _do_cleanup(original_units_registry, original_settings)
 
         return wrapped_callable
 
-    if isinstance(style, six.string_types):
+    if isinstance(style, str):
         return make_cleanup
     else:
         result = make_cleanup(style)
@@ -159,24 +122,22 @@ def check_freetype_version(ver):
     if ver is None:
         return True
 
-    from distutils import version
-    if isinstance(ver, six.string_types):
+    if isinstance(ver, str):
         ver = (ver, ver)
-    ver = [version.StrictVersion(x) for x in ver]
-    found = version.StrictVersion(ft2font.__freetype_version__)
+    ver = [StrictVersion(x) for x in ver]
+    found = StrictVersion(ft2font.__freetype_version__)
 
-    return found >= ver[0] and found <= ver[1]
+    return ver[0] <= found <= ver[1]
 
 
 def _checked_on_freetype_version(required_freetype_version):
-    if check_freetype_version(required_freetype_version):
-        return lambda f: f
-
+    import pytest
     reason = ("Mismatched version of freetype. "
               "Test requires '%s', you have '%s'" %
               (required_freetype_version, ft2font.__freetype_version__))
-    return _knownfailureif('indeterminate', msg=reason,
-                           known_exception_class=ImageComparisonFailure)
+    return pytest.mark.xfail(
+        not check_freetype_version(required_freetype_version),
+        reason=reason, raises=ImageComparisonFailure, strict=False)
 
 
 def remove_ticks_and_titles(figure):
@@ -212,18 +173,15 @@ def _raise_on_image_difference(expected, actual, tol):
 
 
 def _xfail_if_format_is_uncomparable(extension):
-    will_fail = extension not in comparable_formats()
-    if will_fail:
-        fail_msg = 'Cannot compare %s files on this system' % extension
-    else:
-        fail_msg = 'No failure expected'
-
-    return _knownfailureif(will_fail, fail_msg,
-                           known_exception_class=ImageComparisonFailure)
+    import pytest
+    return pytest.mark.xfail(
+        extension not in comparable_formats(),
+        reason='Cannot compare {} files on this system'.format(extension),
+        raises=ImageComparisonFailure, strict=True)
 
 
 def _mark_xfail_if_format_is_uncomparable(extension):
-    if isinstance(extension, six.string_types):
+    if isinstance(extension, str):
         will_fail = extension not in comparable_formats()
     else:
         # Extension might be a pytest marker instead of a plain string.
@@ -260,14 +218,16 @@ class _ImageComparisonBase(object):
         orig_expected_fname = baseline_path + '.' + extension
         if extension == 'eps' and not os.path.exists(orig_expected_fname):
             orig_expected_fname = baseline_path + '.pdf'
-        expected_fname = make_test_filename(os.path.join(
-            self.result_dir, os.path.basename(orig_expected_fname)), 'expected')
+        expected_fname = make_test_filename(
+            os.path.join(self.result_dir,
+                         os.path.basename(orig_expected_fname)),
+            'expected')
         if os.path.exists(orig_expected_fname):
             shutil.copyfile(orig_expected_fname, expected_fname)
         else:
-            reason = ("Do not have baseline image {0} because this "
-                      "file does not exist: {1}".format(expected_fname,
-                                                        orig_expected_fname))
+            reason = ("Do not have baseline image {} because this "
+                      "file does not exist: {}".format(expected_fname,
+                                                       orig_expected_fname))
             raise ImageComparisonFailure(reason)
         return expected_fname
 
@@ -279,7 +239,8 @@ class _ImageComparisonBase(object):
         if self.remove_text:
             remove_ticks_and_titles(fig)
 
-        actual_fname = os.path.join(self.result_dir, baseline) + '.' + extension
+        actual_fname = (
+            os.path.join(self.result_dir, baseline) + '.' + extension)
         kwargs = self.savefig_kwargs.copy()
         if extension == 'pdf':
             kwargs.setdefault('metadata',
@@ -291,12 +252,13 @@ class _ImageComparisonBase(object):
         _raise_on_image_difference(expected_fname, actual_fname, self.tol)
 
 
+@cbook.deprecated("3.0")
 class ImageComparisonTest(CleanupTest, _ImageComparisonBase):
     """
     Nose-based image comparison class
 
     This class generates tests for a nose-based testing framework. Ideally,
-    this class would not be public, and the only publically visible API would
+    this class would not be public, and the only publicly visible API would
     be the :func:`image_comparison` decorator. Unfortunately, there are
     existing downstream users of this class (e.g., pytest-mpl) so it cannot yet
     be removed.
@@ -328,12 +290,6 @@ class ImageComparisonTest(CleanupTest, _ImageComparisonBase):
     def teardown(self):
         self.teardown_class()
 
-    @staticmethod
-    @cbook.deprecated('2.1',
-                      alternative='remove_ticks_and_titles')
-    def remove_text(figure):
-        remove_ticks_and_titles(figure)
-
     def nose_runner(self):
         func = self.compare
         func = _checked_on_freetype_version(self.freetype_version)(func)
@@ -347,12 +303,12 @@ class ImageComparisonTest(CleanupTest, _ImageComparisonBase):
         self.delayed_init(func)
         import nose.tools
 
+        @functools.wraps(func)
         @nose.tools.with_setup(self.setup, self.teardown)
         def runner_wrapper():
-            for case in self.nose_runner():
-                yield case
+            yield from self.nose_runner()
 
-        return _copy_metadata(func, runner_wrapper)
+        return runner_wrapper
 
 
 def _pytest_image_comparison(baseline_images, extensions, tol,
@@ -371,6 +327,7 @@ def _pytest_image_comparison(baseline_images, extensions, tol,
     extensions = map(_mark_xfail_if_format_is_uncomparable, extensions)
 
     def decorator(func):
+        @functools.wraps(func)
         # Parameter indirection; see docstring above and comment below.
         @pytest.mark.usefixtures('mpl_image_comparison_parameters')
         @pytest.mark.parametrize('extension', extensions)
@@ -400,8 +357,7 @@ def _pytest_image_comparison(baseline_images, extensions, tol,
             for idx, baseline in enumerate(baseline_images):
                 img.compare(idx, baseline, extension)
 
-        wrapper.__wrapped__ = func  # For Python 2.7.
-        return _copy_metadata(func, wrapper)
+        return wrapper
 
     return decorator
 
@@ -429,7 +385,7 @@ def image_comparison(baseline_images, extensions=None, tol=0,
     extensions : [ None | list ]
 
         If None, defaults to all supported extensions.
-        Otherwise, a list of extensions to test. For example ['png','pdf'].
+        Otherwise, a list of extensions to test, e.g. ``['png', 'pdf']``.
 
     tol : float, optional, default: 0
         The RMS threshold above which the test is considered failed.
@@ -478,82 +434,39 @@ def image_comparison(baseline_images, extensions=None, tol=0,
 def _image_directories(func):
     """
     Compute the baseline and result image directories for testing *func*.
-    Create the result directory if it doesn't exist.
+
+    For test module ``foo.bar.test_baz``, the baseline directory is at
+    ``foo/bar/baseline_images/test_baz`` and the result directory at
+    ``$(pwd)/result_images/test_baz``.  The result directory is created if it
+    doesn't exist.
     """
-    module_name = func.__module__
-    if module_name == '__main__':
-        # FIXME: this won't work for nested packages in matplotlib.tests
-        warnings.warn('test module run as script. guessing baseline image locations')
-        script_name = sys.argv[0]
-        basedir = os.path.abspath(os.path.dirname(script_name))
-        subdir = os.path.splitext(os.path.split(script_name)[1])[0]
-    else:
-        mods = module_name.split('.')
-        if len(mods) >= 3:
-            mods.pop(0)
-            # mods[0] will be the name of the package being tested (in
-            # most cases "matplotlib") However if this is a
-            # namespace package pip installed and run via the nose
-            # multiprocess plugin or as a specific test this may be
-            # missing. See https://github.com/matplotlib/matplotlib/issues/3314
-        if mods.pop(0) != 'tests':
-            warnings.warn(("Module '%s' does not live in a parent module "
-                "named 'tests'. This is probably ok, but we may not be able "
-                "to guess the correct subdirectory containing the baseline "
-                "images. If things go wrong please make sure that there is "
-                "a parent directory named 'tests' and that it contains a "
-                "__init__.py file (can be empty).") % module_name)
-        subdir = os.path.join(*mods)
-
-        import imp
-        def find_dotted_module(module_name, path=None):
-            """A version of imp which can handle dots in the module name.
-               As for imp.find_module(), the return value is a 3-element
-               tuple (file, pathname, description)."""
-            res = None
-            for sub_mod in module_name.split('.'):
-                try:
-                    res = file, path, _ = imp.find_module(sub_mod, path)
-                    path = [path]
-                    if file is not None:
-                        file.close()
-                except ImportError:
-                    # assume namespace package
-                    path = list(sys.modules[sub_mod].__path__)
-                    res = None, path, None
-            return res
-
-        mod_file = find_dotted_module(func.__module__)[1]
-        basedir = os.path.dirname(mod_file)
-
-    baseline_dir = os.path.join(basedir, 'baseline_images', subdir)
-    result_dir = os.path.abspath(os.path.join('result_images', subdir))
-
-    if not os.path.exists(result_dir):
-        cbook.mkdirs(result_dir)
-
-    return baseline_dir, result_dir
+    module_path = Path(sys.modules[func.__module__].__file__)
+    baseline_dir = module_path.parent / "baseline_images" / module_path.stem
+    result_dir = Path().resolve() / "result_images" / module_path.stem
+    result_dir.mkdir(parents=True, exist_ok=True)
+    return str(baseline_dir), str(result_dir)
 
 
 def switch_backend(backend):
-    # Local import to avoid a hard nose dependency and only incur the
-    # import time overhead at actual test-time.
+
     def switch_backend_decorator(func):
+
         @functools.wraps(func)
         def backend_switcher(*args, **kwargs):
             try:
                 prev_backend = mpl.get_backend()
                 matplotlib.testing.setup()
                 plt.switch_backend(backend)
-                result = func(*args, **kwargs)
+                return func(*args, **kwargs)
             finally:
                 plt.switch_backend(prev_backend)
-            return result
 
-        return _copy_metadata(func, backend_switcher)
+        return backend_switcher
+
     return switch_backend_decorator
 
 
+@cbook.deprecated("3.0")
 def skip_if_command_unavailable(cmd):
     """
     skips a test if a command is unavailable.
@@ -565,7 +478,7 @@ def skip_if_command_unavailable(cmd):
         return a non zero exit code, something like
         ["latex", "-version"]
     """
-    from matplotlib.compat.subprocess import check_output
+    from subprocess import check_output
     try:
         check_output(cmd)
     except:

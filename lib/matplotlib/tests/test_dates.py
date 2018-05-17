@@ -1,22 +1,11 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-from six.moves import map
-
-
 import datetime
+import tempfile
+from unittest.mock import Mock
+
 import dateutil
 import numpy as np
 import pytest
 import pytz
-import tempfile
-import warnings
-
-try:
-    # mock in python 3.3+
-    from unittest import mock
-except ImportError:
-    import mock
 
 from matplotlib.testing.decorators import image_comparison
 import matplotlib.pyplot as plt
@@ -52,12 +41,31 @@ def test_date_numpyx():
                                   datetime.datetime(2017, 1, 1, 3, 1, 1)]]])
 @pytest.mark.parametrize('dtype', ['datetime64[s]',
                                     'datetime64[us]',
-                                    'datetime64[ms]'])
+                                    'datetime64[ms]',
+                                    'datetime64[ns]'])
 def test_date_date2num_numpy(t0, dtype):
     time = mdates.date2num(t0)
     tnp = np.array(t0, dtype=dtype)
     nptime = mdates.date2num(tnp)
     assert np.array_equal(time, nptime)
+
+
+@pytest.mark.parametrize('dtype', ['datetime64[s]',
+                                    'datetime64[us]',
+                                    'datetime64[ms]',
+                                    'datetime64[ns]'])
+def test_date2num_NaT(dtype):
+    t0 = datetime.datetime(2017, 1, 1, 0, 1, 1)
+    tmpl = [mdates.date2num(t0), np.nan]
+    tnp = np.array([t0, 'NaT'], dtype=dtype)
+    nptime = mdates.date2num(tnp)
+    np.testing.assert_array_equal(tmpl, nptime)
+
+
+@pytest.mark.parametrize('units', ['s', 'ms', 'us', 'ns'])
+def test_date2num_NaT_scalar(units):
+    tmpl = mdates.date2num(np.datetime64('NaT', units))
+    assert np.isnan(tmpl)
 
 
 @image_comparison(baseline_images=['date_empty'], extensions=['png'])
@@ -252,7 +260,7 @@ def test_date_formatter_strftime():
 
 def test_date_formatter_callable():
     scale = -11
-    locator = mock.Mock(_get_unit=mock.Mock(return_value=scale))
+    locator = Mock(_get_unit=Mock(return_value=scale))
     callable_formatting_function = (lambda dates, _:
                                     [dt.strftime('%d-%m//%Y') for dt in dates])
 
@@ -356,7 +364,6 @@ def test_auto_date_locator():
                 ['1990-01-01 00:00:00+00:00', '1990-01-01 00:05:00+00:00',
                  '1990-01-01 00:10:00+00:00', '1990-01-01 00:15:00+00:00',
                  '1990-01-01 00:20:00+00:00']
-
                 ],
                [datetime.timedelta(seconds=40),
                 ['1990-01-01 00:00:00+00:00', '1990-01-01 00:00:05+00:00',
@@ -366,11 +373,11 @@ def test_auto_date_locator():
                  '1990-01-01 00:00:40+00:00']
                 ],
                [datetime.timedelta(microseconds=1500),
-                ['1989-12-31 23:59:59.999507+00:00',
+                ['1989-12-31 23:59:59.999500+00:00',
                  '1990-01-01 00:00:00+00:00',
-                 '1990-01-01 00:00:00.000502+00:00',
-                 '1990-01-01 00:00:00.001005+00:00',
-                 '1990-01-01 00:00:00.001508+00:00']
+                 '1990-01-01 00:00:00.000500+00:00',
+                 '1990-01-01 00:00:00.001000+00:00',
+                 '1990-01-01 00:00:00.001500+00:00']
                 ],
                )
 
@@ -439,11 +446,11 @@ def test_auto_date_locator_intmult():
                  '1997-01-01 00:00:40+00:00']
                 ],
                [datetime.timedelta(microseconds=1500),
-                ['1996-12-31 23:59:59.999507+00:00',
+                ['1996-12-31 23:59:59.999500+00:00',
                  '1997-01-01 00:00:00+00:00',
-                 '1997-01-01 00:00:00.000502+00:00',
-                 '1997-01-01 00:00:00.001005+00:00',
-                 '1997-01-01 00:00:00.001508+00:00']
+                 '1997-01-01 00:00:00.000500+00:00',
+                 '1997-01-01 00:00:00.001000+00:00',
+                 '1997-01-01 00:00:00.001500+00:00']
                 ],
                )
 
@@ -501,7 +508,7 @@ def test_date2num_dst():
         subtraction.
         """
         def __sub__(self, other):
-            r = super(dt_tzaware, self).__sub__(other)
+            r = super().__sub__(other)
             tzinfo = getattr(r, 'tzinfo', None)
 
             if tzinfo is not None:
@@ -515,10 +522,10 @@ def test_date2num_dst():
             return r
 
         def __add__(self, other):
-            return self.mk_tzaware(super(dt_tzaware, self).__add__(other))
+            return self.mk_tzaware(super().__add__(other))
 
         def astimezone(self, tzinfo):
-            dt = super(dt_tzaware, self).astimezone(tzinfo)
+            dt = super().astimezone(tzinfo)
             return self.mk_tzaware(dt)
 
         @classmethod
@@ -553,17 +560,32 @@ def test_date2num_dst():
     _test_date2num_dst(date_range, tz_convert)
 
 
-def test_date2num_dst_pandas():
+def test_date2num_dst_pandas(pd):
     # Test for github issue #3896, but in date2num around DST transitions
     # with a timezone-aware pandas date_range object.
-    pd = pytest.importorskip('pandas')
-    from pandas.tseries import converter
-    converter.register()
 
     def tz_convert(*args):
         return pd.DatetimeIndex.tz_convert(*args).astype(object)
 
     _test_date2num_dst(pd.date_range, tz_convert)
+
+
+@pytest.mark.parametrize("attach_tz, get_tz", [
+    (lambda dt, zi: zi.localize(dt), lambda n: pytz.timezone(n)),
+    (lambda dt, zi: dt.replace(tzinfo=zi), lambda n: dateutil.tz.gettz(n))])
+def test_rrulewrapper(attach_tz, get_tz):
+    SYD = get_tz('Australia/Sydney')
+
+    dtstart = attach_tz(datetime.datetime(2017, 4, 1, 0), SYD)
+    dtend = attach_tz(datetime.datetime(2017, 4, 4, 0), SYD)
+
+    rule = mdates.rrulewrapper(freq=dateutil.rrule.DAILY, dtstart=dtstart)
+
+    act = rule.between(dtstart, dtend)
+    exp = [datetime.datetime(2017, 4, 1, 13, tzinfo=dateutil.tz.tzutc()),
+           datetime.datetime(2017, 4, 2, 14, tzinfo=dateutil.tz.tzutc())]
+
+    assert act == exp
 
 
 def test_DayLocator():

@@ -56,23 +56,16 @@ Naming Conventions
 
   * classes Upper or MixedUpperCase
 
-  * varables lower or lowerUpper
+  * variables lower or lowerUpper
 
   * functions lower or underscore_separated
 
 """
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-import six
-
-import matplotlib
 from matplotlib._pylab_helpers import Gcf
-from matplotlib.backend_bases import RendererBase, GraphicsContextBase,\
-     FigureManagerBase, FigureCanvasBase
+from matplotlib.backend_bases import (
+     FigureCanvasBase, FigureManagerBase, GraphicsContextBase, RendererBase)
 from matplotlib.figure import Figure
-from matplotlib.transforms import Bbox
 
 
 class RendererTemplate(RendererBase):
@@ -92,15 +85,16 @@ class RendererTemplate(RendererBase):
     # draw_markers is optional, and we get more correct relative
     # timings by leaving it out.  backend implementers concerned with
     # performance will probably want to implement it
-#     def draw_markers(self, gc, marker_path, marker_trans, path, trans, rgbFace=None):
+#     def draw_markers(self, gc, marker_path, marker_trans, path, trans,
+#                      rgbFace=None):
 #         pass
 
     # draw_path_collection is optional, and we get more correct
     # relative timings by leaving it out. backend implementers concerned with
     # performance will probably want to implement it
 #     def draw_path_collection(self, gc, master_transform, paths,
-#                              all_transforms, offsets, offsetTrans, facecolors,
-#                              edgecolors, linewidths, linestyles,
+#                              all_transforms, offsets, offsetTrans,
+#                              facecolors, edgecolors, linewidths, linestyles,
 #                              antialiaseds):
 #         pass
 
@@ -176,10 +170,9 @@ def draw_if_interactive():
     For GUI backends - this should be overridden if drawing should be done in
     interactive python mode
     """
-    # May be implemented via the `_draw_if_interactive_template` helper.
 
 
-def show():
+def show(block=None):
     """
     For image backends - is not required
     For GUI backends - show() is usually the last line of a pylab script and
@@ -192,7 +185,7 @@ def show():
         pass
 
 
-def new_figure_manager(num, *args, **kwargs):
+def new_figure_manager(num, *args, FigureClass=Figure, **kwargs):
     """
     Create a new figure manager instance
     """
@@ -202,7 +195,6 @@ def new_figure_manager(num, *args, **kwargs):
     # backend_wx, backend_wxagg and backend_tkagg for examples.  Not all GUIs
     # require explicit instantiation of a main-level app (egg backend_gtk,
     # backend_gtkagg) for pylab.
-    FigureClass = kwargs.pop('FigureClass', Figure)
     thisFig = FigureClass(*args, **kwargs)
     return new_figure_manager_given_figure(num, thisFig)
 

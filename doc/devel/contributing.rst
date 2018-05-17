@@ -19,26 +19,26 @@ welcome to post feature requests or pull requests.
 
 If you are reporting a bug, please do your best to include the following:
 
- 1. A short, top-level summary of the bug. In most cases, this should be 1-2
-    sentences.
+1. A short, top-level summary of the bug. In most cases, this should be 1-2
+   sentences.
 
- 2. A short, self-contained code snippet to reproduce the bug, ideally allowing
-    a simple copy and paste to reproduce. Please do your best to reduce the code
-    snippet to the minimum required.
+2. A short, self-contained code snippet to reproduce the bug, ideally allowing
+   a simple copy and paste to reproduce. Please do your best to reduce the code
+   snippet to the minimum required.
 
- 3. The actual outcome of the code snippet
+3. The actual outcome of the code snippet.
 
- 4. The expected outcome of the code snippet
+4. The expected outcome of the code snippet.
 
- 5. The Matplotlib version, Python version and platform that you are using. You
-    can grab the version with the following commands::
+5. The Matplotlib version, Python version and platform that you are using. You
+   can grab the version with the following commands::
 
-        >>> import matplotlib
-        >>> matplotlib.__version__
-        '1.5.3'
-        >>> import platform
-        >>> platform.python_version()
-        '2.7.12'
+      >>> import matplotlib
+      >>> matplotlib.__version__
+      '1.5.3'
+      >>> import platform
+      >>> platform.python_version()
+      '2.7.12'
 
 We have preloaded the issue creation page with a Markdown template that you can
 use to organize this information.
@@ -67,7 +67,7 @@ development environment, using the something like `virtual environments in pytho
 `conda environment <http://conda.pydata.org/docs/using/envs.html>`_.
 
 If you choose to use an already existing environment, and not a clean virtual or
-conda environment, uninstall the current version of Matplotlib in that enviroment
+conda environment, uninstall the current version of Matplotlib in that environment
 using the same method used to install it.
 
 If working on Matplotlib documentation only, the above steps are *not* absolutely
@@ -142,18 +142,17 @@ Additionally you will need to copy :file:`setup.cfg.template` to
 In either case you can then run the tests to check your work
 environment is set up properly::
 
-  python tests.py
+  pytest
 
 .. _pytest: http://doc.pytest.org/en/latest/
 .. _pep8: https://pep8.readthedocs.io/en/latest/
-.. _mock: https://docs.python.org/dev/library/unittest.mock.html
 .. _Ghostscript: https://www.ghostscript.com/
 .. _Inkscape: https://inkscape.org>
 
 .. note::
 
-  **Additional dependencies for testing**: pytest_ (version 3.0 or later),
-  mock_ (if python < 3.3), Ghostscript_, Inkscape_
+  **Additional dependencies for testing**: pytest_ (version 3.4 or later),
+  Ghostscript_, Inkscape_
 
 .. seealso::
 
@@ -175,39 +174,36 @@ documented in the :ref:`development-workflow` section.
 
 A brief overview is:
 
- 1. `Create an account <https://github.com/join>`_ on
-    GitHub if you do not already have one.
+1. `Create an account <https://github.com/join>`_ on GitHub if you do not
+   already have one.
 
- 2. Fork the `project repository
-    <https://github.com/matplotlib/matplotlib>`__: click on the 'Fork' button
-    near the top of the page. This creates a copy of the code under your
-    account on the GitHub server.
+2. Fork the `project repository <https://github.com/matplotlib/matplotlib>`_:
+   click on the 'Fork' button near the top of the page. This creates a copy of
+   the code under your account on the GitHub server.
 
- 3. Clone this copy to your local disk::
+3. Clone this copy to your local disk::
 
-        $ git clone https://github.com/YourLogin/matplotlib.git
+      $ git clone https://github.com/YourLogin/matplotlib.git
 
- 4. Create a branch to hold your changes::
+4. Create a branch to hold your changes::
 
-        $ git checkout -b my-feature origin/master
+      $ git checkout -b my-feature origin/master
 
-    and start making changes. Never work in the ``master`` branch!
+   and start making changes. Never work in the ``master`` branch!
 
- 5. Work on this copy, on your computer, using Git to do the version
-    control. When you're done editing e.g., ``lib/matplotlib/collections.py``,
-    do::
+5. Work on this copy, on your computer, using Git to do the version control.
+   When you're done editing e.g., ``lib/matplotlib/collections.py``, do::
 
-        $ git add lib/matplotlib/collections.py
-        $ git commit
+      $ git add lib/matplotlib/collections.py
+      $ git commit
 
-    to record your changes in Git, then push them to GitHub with::
+   to record your changes in Git, then push them to GitHub with::
 
-        $ git push -u origin my-feature
+      $ git push -u origin my-feature
 
-Finally, go to the web page of your fork of the Matplotlib repo,
-and click 'Pull request' to send your changes to the maintainers for review.
-You may want to consider sending an email to the mailing list for more
-visibility.
+Finally, go to the web page of your fork of the Matplotlib repo, and click
+'Pull request' to send your changes to the maintainers for review.  You may
+want to consider sending an email to the mailing list for more visibility.
 
 .. seealso::
 
@@ -221,62 +217,60 @@ Contributing pull requests
 It is recommended to check that your contribution complies with the following
 rules before submitting a pull request:
 
-  * If your pull request addresses an issue, please use the title to describe
-    the issue and mention the issue number in the pull request description
-    to ensure a link is created to the original issue.
+* If your pull request addresses an issue, please use the title to describe the
+  issue and mention the issue number in the pull request description to ensure
+  that a link is created to the original issue.
 
-  * All public methods should have informative docstrings with sample
-    usage when appropriate. Use the
-    `numpy docstring standard <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_
+* All public methods should have informative docstrings with sample usage when
+  appropriate. Use the `numpy docstring standard
+  <https://numpydoc.readthedocs.io/en/latest/format.html>`_.
 
-  * Formatting should follow `PEP8 recommendation
-    <https://www.python.org/dev/peps/pep-0008/>`_. You should consider
-    installing/enabling automatic PEP8 checking in your editor.  Part of the
-    test suite is checking PEP8 compliance, things go smoother if the code is
-    mostly PEP8 compliant to begin with.
+* Formatting should follow the recommendations of `PEP8
+  <https://www.python.org/dev/peps/pep-0008/>`__. You should consider
+  installing/enabling automatic PEP8 checking in your editor.  Part of the test
+  suite is checking PEP8 compliance, things go smoother if the code is mostly
+  PEP8 compliant to begin with.
 
-  * Each high-level plotting function should have a simple example in
-    the ``Example`` section of the docstring.  This should be as simple as
-    possible to demonstrate the method.  More complex examples should go
-    in the ``examples`` tree.
+* Each high-level plotting function should have a simple example in the
+  ``Example`` section of the docstring.  This should be as simple as possible
+  to demonstrate the method.  More complex examples should go in the
+  ``examples`` tree.
 
-  * Changes (both new features and bugfixes) should be tested. See
-    :ref:`testing` for more details.
+* Changes (both new features and bugfixes) should be tested. See :ref:`testing`
+  for more details.
 
-  * Import the following modules using the standard scipy conventions::
+* Import the following modules using the standard scipy conventions::
 
-      import numpy as np
-      import numpy.ma as ma
-      import matplotlib as mpl
-      import matplotlib.pyplot as plt
-      import matplotlib.cbook as cbook
-      import matplotlib.patches as mpatches
+     import numpy as np
+     import numpy.ma as ma
+     import matplotlib as mpl
+     import matplotlib.pyplot as plt
+     import matplotlib.cbook as cbook
+     import matplotlib.patches as mpatches
 
-  * If your change is a major new feature, add an entry to the ``What's new``
-    section by adding a new file in ``doc/users/whats_new`` (see
-    :file:`doc/users/whats_new/README` for more information).
+* If your change is a major new feature, add an entry to the ``What's new``
+  section by adding a new file in ``doc/users/next_whats_new`` (see
+  :file:`doc/users/next_whats_new/README.rst` for more information).
 
-  * If you change the API in a backward-incompatible way, please
-    document it in `doc/api/api_changes`, by adding a new file describing your
-    changes (see :file:`doc/api/api_changes/README` for more information)
+* If you change the API in a backward-incompatible way, please document it in
+  `doc/api/api_changes`, by adding a new file describing your changes (see
+  :file:`doc/api/api_changes/README.rst` for more information)
 
-  * See below for additional points about
-    :ref:`keyword-argument-processing`, if code in your pull request
-    does that.
+* See below for additional points about :ref:`keyword-argument-processing`, if
+  applicable for your pull request.
 
 In addition, you can check for common programming errors with the following
 tools:
 
-    * Code with a good unittest coverage (at least 70%, better 100%), check
-      with::
+* Code with a good unittest coverage (at least 70%, better 100%), check with::
 
-        python -mpip install coverage
-        python tests.py --with-coverage
+   python -mpip install coverage
+   python tests.py --with-coverage
 
-    * No pyflakes warnings, check with::
+* No pyflakes warnings, check with::
 
-        python -mpip install pyflakes
-        pyflakes path/to/module.py
+   python -mpip install pyflakes
+   pyflakes path/to/module.py
 
 .. note::
 
@@ -300,12 +294,11 @@ Issues for New Contributors
 ---------------------------
 
 New contributors should look for the following tags when looking for issues.
-We strongly recommend that new contributors tackle
-`new-contributor-friendly <https://github.com/matplotlib/matplotlib/labels/new-contributor-friendly>`_
-issues (easy, well documented issues, that do not require an understanding of
-the different submodules of Matplotlib) and
-`Easy-fix <https://github.com/matplotlib/matplotlib/labels/Difficulty%3A%20Easy>`_
-issues. This helps the contributor become familiar with the contribution
+We strongly recommend that new contributors tackle issues labeled
+`good first issue <https://github.com/matplotlib/matplotlib/labels/good%20first%20issue>`_
+as they are easy, well documented issues, that do not require an understanding of
+the different submodules of Matplotlib.
+This helps the contributor become familiar with the contribution
 workflow, and for the core devs to become acquainted with the contributor;
 besides which, we frequently underestimate how easy an issue is to solve!
 
@@ -401,41 +394,20 @@ on, use the key/value keyword args in the function definition rather
 than the ``**kwargs`` idiom.
 
 In some cases, you may want to consume some keys in the local
-function, and let others pass through.  You can ``pop`` the ones to be
-used locally and pass on the rest.  For example, in
+function, and let others pass through.  Instead of poping arguments to
+use off ``**kwargs``, specify them as keyword-only arguments to the local
+function.  This makes it obvious at a glance which arguments will be
+consumed in the function.  For example, in
 :meth:`~matplotlib.axes.Axes.plot`, ``scalex`` and ``scaley`` are
 local arguments and the rest are passed on as
 :meth:`~matplotlib.lines.Line2D` keyword arguments::
 
   # in axes/_axes.py
-  def plot(self, *args, **kwargs):
-      scalex = kwargs.pop('scalex', True)
-      scaley = kwargs.pop('scaley', True)
-      if not self._hold: self.cla()
+  def plot(self, *args, scalex=True, scaley=True, **kwargs):
       lines = []
       for line in self._get_lines(*args, **kwargs):
           self.add_line(line)
           lines.append(line)
-
-Note: there is a use case when ``kwargs`` are meant to be used locally
-in the function (not passed on), but you still need the ``**kwargs``
-idiom.  That is when you want to use ``*args`` to allow variable
-numbers of non-keyword args.  In this case, python will not allow you
-to use named keyword args after the ``*args`` usage, so you will be
-forced to use ``**kwargs``.  An example is
-:meth:`matplotlib.contour.ContourLabeler.clabel`::
-
-  # in contour.py
-  def clabel(self, *args, **kwargs):
-      fontsize = kwargs.get('fontsize', None)
-      inline = kwargs.get('inline', 1)
-      self.fmt = kwargs.get('fmt', '%1.3f')
-      colors = kwargs.get('colors', None)
-      if len(args) == 0:
-          levels = self.levels
-          indices = range(len(self.levels))
-      elif len(args) == 1:
-         ...etc...
 
 .. _using_logging:
 

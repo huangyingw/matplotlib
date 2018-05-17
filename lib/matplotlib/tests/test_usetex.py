@@ -1,11 +1,7 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import pytest
 
 import matplotlib
 from matplotlib.testing.decorators import image_comparison
-from matplotlib.compat.subprocess import check_output
 import matplotlib.pyplot as plt
 
 

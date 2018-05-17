@@ -53,13 +53,12 @@ The ``Pan/Zoom`` button
 .. image:: ../../lib/matplotlib/mpl-data/images/zoom_to_rect_large.png
 
 The ``Zoom-to-rectangle`` button
-    Click this toolbar button to activate this mode.  Put your mouse
-    somewhere over an axes and press the left mouse button.  Drag the
-    mouse while holding the button to a new location and release.  The
-    axes view limits will be zoomed to the rectangle you have defined.
-    There is also an experimental 'zoom out to rectangle' in this mode
-    with the right button, which will place your entire axes in the
-    region defined by the zoom out rectangle.
+    Click this toolbar button to activate this mode.  Put your mouse somewhere
+    over an axes and press a mouse button.  Define a rectangular region by
+    dragging the mouse while holding the button to a new location.  When using
+    the left mouse button, the axes view limits will be zoomed to the defined
+    region.  When using the right mouse button, the axes view limits will be
+    zoomed out, placing the original axes in the defined region.
 
 .. image:: ../../lib/matplotlib/mpl-data/images/subplots_large.png
 
@@ -110,31 +109,34 @@ automatically for every figure.  If you are writing your own user
 interface code, you can add the toolbar as a widget.  The exact syntax
 depends on your UI, but we have examples for every supported UI in the
 ``matplotlib/examples/user_interfaces`` directory.  Here is some
-example code for GTK::
+example code for GTK+ 3::
 
 
-    import gtk
+    import gi
+    gi.require_version('Gtk', '3.0')
+    from gi.repository import Gtk
 
     from matplotlib.figure import Figure
-    from matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg as FigureCanvas
-    from matplotlib.backends.backend_gtkagg import NavigationToolbar2GTKAgg as NavigationToolbar
+    from matplotlib.backends.backend_gtk3agg import FigureCanvas
+    from matplotlib.backends.backend_gtk3 import (
+        NavigationToolbar2GTK3 as NavigationToolbar)
 
-    win = gtk.Window()
-    win.connect("destroy", lambda x: gtk.main_quit())
+    win = Gtk.Window()
+    win.connect("destroy", lambda x: Gtk.main_quit())
     win.set_default_size(400,300)
     win.set_title("Embedding in GTK")
 
-    vbox = gtk.VBox()
+    vbox = Gtk.VBox()
     win.add(vbox)
 
     fig = Figure(figsize=(5,4), dpi=100)
     ax = fig.add_subplot(111)
     ax.plot([1,2,3])
 
-    canvas = FigureCanvas(fig)  # a gtk.DrawingArea
-    vbox.pack_start(canvas)
+    canvas = FigureCanvas(fig)  # a Gtk.DrawingArea
+    vbox.pack_start(canvas, True, True, 0)
     toolbar = NavigationToolbar(canvas, win)
-    vbox.pack_start(toolbar, False, False)
+    vbox.pack_start(toolbar, False, False, 0)
 
     win.show_all()
-    gtk.main()
+    Gtk.main()

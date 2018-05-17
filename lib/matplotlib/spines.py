@@ -1,22 +1,13 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-import six
-
-import matplotlib
-
-import matplotlib.artist as martist
-from matplotlib.artist import allow_rasterization
-from matplotlib import docstring
-import matplotlib.transforms as mtransforms
-import matplotlib.lines as mlines
-import matplotlib.patches as mpatches
-import matplotlib.path as mpath
-import matplotlib.cbook as cbook
-import numpy as np
 import warnings
 
-rcParams = matplotlib.rcParams
+import numpy as np
+
+import matplotlib
+from matplotlib import docstring, rcParams
+from matplotlib.artist import allow_rasterization
+import matplotlib.transforms as mtransforms
+import matplotlib.patches as mpatches
+import matplotlib.path as mpath
 
 
 class Spine(mpatches.Patch):
@@ -52,7 +43,7 @@ class Spine(mpatches.Patch):
         Valid kwargs are:
         %(Patch)s
         """
-        super(Spine, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.axes = axes
         self.set_figure(self.axes.figure)
         self.spine_type = spine_type
@@ -73,8 +64,8 @@ class Spine(mpatches.Patch):
         # them pass through the spines machinery without errors.)
         self._position = None
         if not isinstance(path, matplotlib.path.Path):
-            msg = "'path' must be an instance of 'matplotlib.path.Path'"
-            raise ValueError(msg)
+            raise ValueError(
+                "'path' must be an instance of 'matplotlib.path.Path'")
         self._path = path
 
         # To support drawing both linear and circular spines, this
@@ -153,7 +144,7 @@ class Spine(mpatches.Patch):
             self._recompute_transform()
             return self._patch_transform
         else:
-            return super(Spine, self).get_patch_transform()
+            return super().get_patch_transform()
 
     def get_path(self):
         return self._path
@@ -190,7 +181,7 @@ class Spine(mpatches.Patch):
         """
         self._ensure_position_is_set()
         position = self._position
-        if isinstance(position, six.string_types):
+        if isinstance(position, str):
             if position == 'center':
                 position = ('axes', 0.5)
             elif position == 'zero':
@@ -314,7 +305,7 @@ class Spine(mpatches.Patch):
     @allow_rasterization
     def draw(self, renderer):
         self._adjust_location()
-        ret = super(Spine, self).draw(renderer)
+        ret = super().draw(renderer)
         self.stale = False
         return ret
 
@@ -322,7 +313,7 @@ class Spine(mpatches.Patch):
         """calculate the offset transform performed by the spine"""
         self._ensure_position_is_set()
         position = self._position
-        if isinstance(position, six.string_types):
+        if isinstance(position, str):
             if position == 'center':
                 position = ('axes', 0.5)
             elif position == 'zero':
@@ -420,9 +411,8 @@ class Spine(mpatches.Patch):
             if len(position) != 2:
                 raise ValueError("position should be 'center' or 2-tuple")
             if position[0] not in ['outward', 'axes', 'data']:
-                msg = ("position[0] should be in [ 'outward' | 'axes' |"
-                       " 'data' ]")
-                raise ValueError(msg)
+                raise ValueError("position[0] should be one of 'outward', "
+                                 "'axes', or 'data' ")
         self._position = position
         self._calc_offset_transform()
 

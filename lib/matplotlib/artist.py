@@ -1,6 +1,3 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import six
 
 from collections import OrderedDict, namedtuple
@@ -124,7 +121,6 @@ class Artist(object):
         d = self.__dict__.copy()
         # remove the unpicklable remove method, this will get re-added on load
         # (by the axes) if the artist lives on an axes.
-        d['_remove_method'] = None
         d['stale_callback'] = None
         return d
 
@@ -306,9 +302,8 @@ class Artist(object):
 
         Parameters
         ----------
-        t : `~.Transform`
-            ..
-                ACCEPTS: `~.Transform`
+        t : `.Transform`
+            .. ACCEPTS: `.Transform`
         """
         self._transform = t
         self._transformSet = True
@@ -327,6 +322,7 @@ class Artist(object):
             self._transform = self._transform._as_mpl_transform(self.axes)
         return self._transform
 
+    @cbook.deprecated("2.2")
     def hitlist(self, event):
         """
         List the children of the artist which contain the mouse event *event*.
@@ -379,8 +375,7 @@ class Artist(object):
         Parameters
         ----------
         picker : callable
-            ..
-                ACCEPTS: a callable function
+            .. ACCEPTS: a callable function
         """
         self._contains = picker
 
@@ -460,8 +455,7 @@ class Artist(object):
         Parameters
         ----------
         picker : None or bool or float or callable
-            ..
-                ACCEPTS: [None | bool | float | callable]
+            .. ACCEPTS: [None | bool | float | callable]
         """
         self._picker = picker
 
@@ -471,7 +465,7 @@ class Artist(object):
 
     @cbook.deprecated("2.2", "artist.figure is not None")
     def is_figure_set(self):
-        """Returns whether the artist is assigned to a `~.Figure`."""
+        """Returns whether the artist is assigned to a `.Figure`."""
         return self.figure is not None
 
     def get_url(self):
@@ -485,8 +479,7 @@ class Artist(object):
         Parameters
         ----------
         url : str
-            ..
-                ACCEPTS: a url string
+            .. ACCEPTS: a url string
         """
         self._url = url
 
@@ -501,8 +494,7 @@ class Artist(object):
         Parameters
         ----------
         gid : str
-            ..
-                ACCEPTS: an id string
+            .. ACCEPTS: an id string
         """
         self._gid = gid
 
@@ -540,8 +532,7 @@ class Artist(object):
         Parameters
         ----------
         snap : bool or None
-            ..
-                ACCEPTS: bool or None
+            .. ACCEPTS: bool or None
         """
         self._snap = snap
         self.stale = True
@@ -554,17 +545,17 @@ class Artist(object):
         -------
         sketch_params : tuple or `None`
 
-        A 3-tuple with the following elements:
+            A 3-tuple with the following elements:
 
-          * `scale`: The amplitude of the wiggle perpendicular to the
-            source line.
+              * `scale`: The amplitude of the wiggle perpendicular to the
+                source line.
 
-          * `length`: The length of the wiggle along the line.
+              * `length`: The length of the wiggle along the line.
 
-          * `randomness`: The scale factor by which the length is
-            shrunken or expanded.
+              * `randomness`: The scale factor by which the length is
+                shrunken or expanded.
 
-        May return `None` if no sketch parameters were set.
+            May return `None` if no sketch parameters were set.
         """
         return self._sketch
 
@@ -588,8 +579,7 @@ class Artist(object):
             The scale factor by which the length is shrunken or
             expanded (default 16.0)
 
-            ..
-                ACCEPTS: (scale: float, length: float, randomness: float)
+            .. ACCEPTS: (scale: float, length: float, randomness: float)
         """
         if scale is None:
             self._sketch = None
@@ -602,9 +592,8 @@ class Artist(object):
 
         Parameters
         ----------
-        path_effects : `~.AbstractPathEffect`
-            ..
-                ACCEPTS: `~.AbstractPathEffect`
+        path_effects : `.AbstractPathEffect`
+            .. ACCEPTS: `.AbstractPathEffect`
         """
         self._path_effects = path_effects
         self.stale = True
@@ -613,18 +602,17 @@ class Artist(object):
         return self._path_effects
 
     def get_figure(self):
-        """Return the `~.Figure` instance the artist belongs to."""
+        """Return the `.Figure` instance the artist belongs to."""
         return self.figure
 
     def set_figure(self, fig):
         """
-        Set the `~.Figure` instance the artist belongs to.
+        Set the `.Figure` instance the artist belongs to.
 
         Parameters
         ----------
-        fig : `~.Figure`
-            ..
-                ACCEPTS: a `~.Figure` instance
+        fig : `.Figure`
+            .. ACCEPTS: a `.Figure` instance
         """
         # if this is a no-op just return
         if self.figure is fig:
@@ -644,13 +632,12 @@ class Artist(object):
 
     def set_clip_box(self, clipbox):
         """
-        Set the artist's clip `~.Bbox`.
+        Set the artist's clip `.Bbox`.
 
         Parameters
         ----------
-        clipbox : `~.Bbox`
-            ..
-                ACCEPTS: a `~.Bbox` instance
+        clipbox : `.Bbox`
+            .. ACCEPTS: a `.Bbox` instance
         """
         self.clipbox = clipbox
         self.pchanged()
@@ -671,7 +658,7 @@ class Artist(object):
         this method will set the clipping box to the corresponding rectangle
         and set the clipping path to ``None``.
 
-        ACCEPTS: [(`~matplotlib.path.Path`, `~.Transform`) | `~.Patch` | None]
+        ACCEPTS: [(`~matplotlib.path.Path`, `.Transform`) | `.Patch` | None]
         """
         from matplotlib.patches import Patch, Rectangle
 
@@ -757,8 +744,7 @@ class Artist(object):
         Parameters
         ----------
         b : bool
-            ..
-                ACCEPTS: bool
+            .. ACCEPTS: bool
         """
         self._clipon = b
         # This may result in the callbacks being hit twice, but ensures they
@@ -789,8 +775,7 @@ class Artist(object):
         Parameters
         ----------
         rasterized : bool or None
-            ..
-                ACCEPTS: bool or None
+            .. ACCEPTS: bool or None
         """
         if rasterized and not hasattr(self.draw, "_supports_rasterization"):
             warnings.warn("Rasterization of '%s' will be ignored" % self)
@@ -810,8 +795,7 @@ class Artist(object):
             A filter function, which takes a (m, n, 3) float array and a dpi
             value, and returns a (m, n, 3) array.
 
-            ..
-                ACCEPTS: a filter function, which takes a (m, n, 3) float array
+            .. ACCEPTS: a filter function, which takes a (m, n, 3) float array
                 and a dpi value, and returns a (m, n, 3) array
         """
         self._agg_filter = filter_func
@@ -831,8 +815,7 @@ class Artist(object):
         Parameters
         ----------
         alpha : float
-            ..
-                ACCEPTS: float (0.0 transparent through 1.0 opaque)
+            .. ACCEPTS: float (0.0 transparent through 1.0 opaque)
         """
         self._alpha = alpha
         self.pchanged()
@@ -845,8 +828,7 @@ class Artist(object):
         Parameters
         ----------
         b : bool
-            ..
-                ACCEPTS: bool
+            .. ACCEPTS: bool
         """
         self._visible = b
         self.pchanged()
@@ -859,8 +841,7 @@ class Artist(object):
         Parameters
         ----------
         b : bool
-            ..
-                ACCEPTS: bool
+            .. ACCEPTS: bool
         """
         if self._animated != b:
             self._animated = b
@@ -896,13 +877,8 @@ class Artist(object):
                     raise AttributeError('Unknown property %s' % k)
                 return func(v)
 
-        store = self.eventson
-        self.eventson = False
-        try:
-            ret = [_update_property(self, k, v)
-                   for k, v in props.items()]
-        finally:
-            self.eventson = store
+        with cbook._setattr_cm(self, eventson=False):
+            ret = [_update_property(self, k, v) for k, v in props.items()]
 
         if len(ret):
             self.pchanged()
@@ -923,8 +899,7 @@ class Artist(object):
             *s* will be converted to a string by calling `str` (`unicode` on
             Py2).
 
-            ..
-                ACCEPTS: object
+            .. ACCEPTS: object
         """
         if s is not None:
             self._label = six.text_type(s)
@@ -945,8 +920,7 @@ class Artist(object):
         Parameters
         ----------
         level : float
-            ..
-                ACCEPTS: float
+            .. ACCEPTS: float
         """
         if level is None:
             level = self.__class__.zorder
@@ -1060,8 +1034,9 @@ class Artist(object):
             data[0]
         except (TypeError, IndexError):
             data = [data]
-        return ', '.join('{:0.3g}'.format(item) for item in data if
-                isinstance(item, (np.floating, np.integer, int, float)))
+        data_str = ', '.join('{:0.3g}'.format(item) for item in data if
+                   isinstance(item, (np.floating, np.integer, int, float)))
+        return "[" + data_str + "]"
 
     @property
     def mouseover(self):
@@ -1093,11 +1068,11 @@ class ArtistInspector(object):
         :class:`Artists` are of the same type) and it is your responsibility
         to make sure this is so.
         """
-        if cbook.iterable(o):
-            # Wrapped in list instead of doing try-except around next(iter(o))
-            o = list(o)
-            if len(o):
-                o = o[0]
+        if not isinstance(o, Artist):
+            if cbook.iterable(o):
+                o = list(o)
+                if len(o):
+                    o = o[0]
 
         self.oorig = o
         if not inspect.isclass(o):
@@ -1132,7 +1107,7 @@ class ArtistInspector(object):
         return aliases
 
     _get_valid_values_regex = re.compile(
-        r"\n\s*ACCEPTS:\s*((?:.|\n)*?)(?:$|(?:\n\n))"
+        r"\n\s*(?:\.\.\s+)?ACCEPTS:\s*((?:.|\n)*?)(?:$|(?:\n\n))"
     )
 
     def get_valid_values(self, attr):
@@ -1140,7 +1115,7 @@ class ArtistInspector(object):
         Get the legal arguments for the setter associated with *attr*.
 
         This is done by querying the docstring of the function *set_attr*
-        for a line that begins with ACCEPTS:
+        for a line that begins with "ACCEPTS" or ".. ACCEPTS":
 
         e.g., for a line linestyle, return
         "[ ``'-'`` | ``'--'`` | ``'-.'`` | ``':'`` | ``'steps'`` | ``'None'``
@@ -1244,8 +1219,8 @@ class ArtistInspector(object):
 
     def pprint_setters(self, prop=None, leadingspace=2):
         """
-        If *prop* is *None*, return a list of strings of all settable properies
-        and their valid values.
+        If *prop* is *None*, return a list of strings of all settable
+        properties and their valid values.
 
         If *prop* is not *None*, it is a valid property name and that
         property will be returned as a string of property : valid
@@ -1270,10 +1245,10 @@ class ArtistInspector(object):
             lines.append('%s%s: %s' % (pad, name, accepts))
         return lines
 
-    def pprint_setters_rest(self, prop=None, leadingspace=2):
+    def pprint_setters_rest(self, prop=None, leadingspace=4):
         """
-        If *prop* is *None*, return a list of strings of all settable properies
-        and their valid values.  Format the output for ReST
+        If *prop* is *None*, return a list of strings of all settable
+        properties and their valid values.  Format the output for ReST
 
         If *prop* is not *None*, it is a valid property name and that
         property will be returned as a string of property : valid
@@ -1298,6 +1273,12 @@ class ArtistInspector(object):
 
         col0_len = max(len(n) for n in names)
         col1_len = max(len(a) for a in accepts)
+
+        lines.append('')
+        lines.append(pad + '.. table::')
+        lines.append(pad + '   :class: property-table')
+        pad += '   '
+
         table_formatstr = pad + '=' * col0_len + '   ' + '=' * col1_len
 
         lines.append('')
@@ -1448,7 +1429,7 @@ def setp(obj, *args, **kwargs):
       >>> setp(lines, linewidth=2, color='r')        # python style
     """
 
-    if not cbook.iterable(obj):
+    if isinstance(obj, Artist):
         objs = [obj]
     else:
         objs = list(cbook.flatten(obj))
@@ -1474,24 +1455,17 @@ def setp(obj, *args, **kwargs):
         raise ValueError('The set args must be string, value pairs')
 
     # put args into ordereddict to maintain order
-    funcvals = OrderedDict()
-    for i in range(0, len(args) - 1, 2):
-        funcvals[args[i]] = args[i + 1]
-
-    ret = [o.update(funcvals) for o in objs]
-    ret.extend([o.set(**kwargs) for o in objs])
-    return [x for x in cbook.flatten(ret)]
+    funcvals = OrderedDict((k, v) for k, v in zip(args[::2], args[1::2]))
+    ret = [o.update(funcvals) for o in objs] + [o.set(**kwargs) for o in objs]
+    return list(cbook.flatten(ret))
 
 
 def kwdoc(a):
     hardcopy = matplotlib.rcParams['docstring.hardcopy']
     if hardcopy:
         return '\n'.join(ArtistInspector(a).pprint_setters_rest(
-                         leadingspace=2))
+                         leadingspace=4))
     else:
         return '\n'.join(ArtistInspector(a).pprint_setters(leadingspace=2))
 
 docstring.interpd.update(Artist=kwdoc(Artist))
-
-_get_axes_msg = """{0} has been deprecated in mpl 1.5, please use the
-axes property.  A removal date has not been set."""

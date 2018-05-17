@@ -1,8 +1,7 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import six
 import sys
+
+import matplotlib
 
 
 def test_simple():
@@ -40,3 +39,7 @@ def test_override_builtins():
                 overridden = True
 
     assert not overridden
+
+
+def test_verbose():
+    assert isinstance(matplotlib.verbose, matplotlib.Verbose)

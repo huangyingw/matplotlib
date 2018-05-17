@@ -1,14 +1,9 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+import collections
+import inspect
+from unittest import mock
 
-try:
-    # mock in python 3.3+
-    from unittest import mock
-except ImportError:
-    import mock
 import numpy as np
 import pytest
-
 
 from matplotlib.testing.decorators import image_comparison
 import matplotlib.pyplot as plt
@@ -16,36 +11,25 @@ import matplotlib as mpl
 import matplotlib.transforms as mtransforms
 import matplotlib.collections as mcollections
 from matplotlib.legend_handler import HandlerTuple
-import inspect
+import matplotlib.legend as mlegend
 
 
-# test that docstrigs are the same
-def get_docstring_section(func, section):
-    """ extract a section from the docstring of a function """
-    ll = inspect.getdoc(func)
-    lines = ll.splitlines()
-    insec = False
-    st = ''
-    for ind in range(len(lines)):
-        if lines[ind][:len(section)] == section and lines[ind+1][:3] == '---':
-            insec = True
-            ind = ind+1
-        if insec:
-            if len(lines[ind + 1]) > 3 and lines[ind + 1][0:3] == '---':
-                insec = False
-                break
-            else:
-                st += lines[ind] + '\n'
-    return st
+def test_legend_ordereddict():
+    # smoketest that ordereddict inputs work...
 
+    X = np.random.randn(10)
+    Y = np.random.randn(10)
+    labels = ['a'] * 5 + ['b'] * 5
+    colors = ['r'] * 5 + ['g'] * 5
 
-def test_legend_kwdocstrings():
-    stleg = get_docstring_section(mpl.legend.Legend.__init__, 'Parameters')
-    stax = get_docstring_section(mpl.axes.Axes.legend, 'Parameters')
-    stfig = get_docstring_section(mpl.figure.Figure.legend, 'Parameters')
-    assert stleg == stax
-    assert stfig == stax
-    assert stleg == stfig
+    fig, ax = plt.subplots()
+    for x, y, label, color in zip(X, Y, labels, colors):
+        ax.scatter(x, y, label=label, c=color)
+
+    handles, labels = ax.get_legend_handles_labels()
+    legend = collections.OrderedDict(zip(labels, handles))
+    ax.legend(legend.values(), legend.keys(),
+              loc='center left', bbox_to_anchor=(1, .5))
 
 
 @image_comparison(baseline_images=['legend_auto1'], remove_text=True)
@@ -56,7 +40,7 @@ def test_legend_auto1():
     x = np.arange(100)
     ax.plot(x, 50 - x, 'o', label='y=1')
     ax.plot(x, x - 50, 'o', label='y=-1')
-    ax.legend(loc=0)
+    ax.legend(loc='best')
 
 
 @image_comparison(baseline_images=['legend_auto2'], remove_text=True)
@@ -65,9 +49,9 @@ def test_legend_auto2():
     fig = plt.figure()
     ax = fig.add_subplot(111)
     x = np.arange(100)
-    b1 = ax.bar(x, x, color='m')
-    b2 = ax.bar(x, x[::-1], color='g')
-    ax.legend([b1[0], b2[0]], ['up', 'down'], loc=0)
+    b1 = ax.bar(x, x, align='edge', color='m')
+    b2 = ax.bar(x, x[::-1], align='edge', color='g')
+    ax.legend([b1[0], b2[0]], ['up', 'down'], loc='best')
 
 
 @image_comparison(baseline_images=['legend_auto3'])
@@ -80,7 +64,7 @@ def test_legend_auto3():
     ax.plot(x, y, 'o-', label='line')
     ax.set_xlim(0.0, 1.0)
     ax.set_ylim(0.0, 1.0)
-    ax.legend(loc=0)
+    ax.legend(loc='best')
 
 
 @image_comparison(baseline_images=['legend_various_labels'], remove_text=True)
@@ -89,9 +73,9 @@ def test_various_labels():
     fig = plt.figure()
     ax = fig.add_subplot(121)
     ax.plot(np.arange(4), 'o', label=1)
-    ax.plot(np.linspace(4, 4.1), 'o', label='D\xe9velopp\xe9s')
+    ax.plot(np.linspace(4, 4.1), 'o', label='Développés')
     ax.plot(np.arange(4, 1, -1), 'o', label='__nolegend__')
-    ax.legend(numpoints=1, loc=0)
+    ax.legend(numpoints=1, loc='best')
 
 
 @image_comparison(baseline_images=['legend_labels_first'], extensions=['png'],
@@ -103,7 +87,7 @@ def test_labels_first():
     ax.plot(np.arange(10), '-o', label=1)
     ax.plot(np.ones(10)*5, ':x', label="x")
     ax.plot(np.arange(20, 10, -1), 'd', label="diamond")
-    ax.legend(loc=0, markerfirst=False)
+    ax.legend(loc='best', markerfirst=False)
 
 
 @image_comparison(baseline_images=['legend_multiple_keys'], extensions=['png'],
@@ -128,7 +112,7 @@ def test_alpha_rgba():
 
     fig, ax = plt.subplots(1, 1)
     ax.plot(range(10), lw=5)
-    leg = plt.legend(['Longlabel that will go away'], loc=10)
+    leg = plt.legend(['Longlabel that will go away'], loc='center')
     leg.legendPatch.set_facecolor([1, 0, 0, 0.5])
 
 
@@ -140,7 +124,7 @@ def test_alpha_rcparam():
     fig, ax = plt.subplots(1, 1)
     ax.plot(range(10), lw=5)
     with mpl.rc_context(rc={'legend.framealpha': .75}):
-        leg = plt.legend(['Longlabel that will go away'], loc=10)
+        leg = plt.legend(['Longlabel that will go away'], loc='center')
         # this alpha is going to be over-ridden by the rcparam with
         # sets the alpha of the patch to be non-None which causes the alpha
         # value of the face color to be discarded.  This behavior may not be
@@ -194,12 +178,12 @@ def test_legend_expand():
     x = np.arange(100)
     for ax, mode in zip(axes_list, legend_modes):
         ax.plot(x, 50 - x, 'o', label='y=1')
-        l1 = ax.legend(loc=2, mode=mode)
+        l1 = ax.legend(loc='upper left', mode=mode)
         ax.add_artist(l1)
         ax.plot(x, x - 50, 'o', label='y=-1')
-        l2 = ax.legend(loc=5, mode=mode)
+        l2 = ax.legend(loc='right', mode=mode)
         ax.add_artist(l2)
-        ax.legend(loc=3, mode=mode, ncol=2)
+        ax.legend(loc='lower left', mode=mode, ncol=2)
 
 
 @image_comparison(baseline_images=['hatching'], remove_text=True,
@@ -387,7 +371,7 @@ def test_legend_stackplot():
     ax.stackplot(x, y1, y2, y3, labels=['y1', 'y2', 'y3'])
     ax.set_xlim((0, 10))
     ax.set_ylim((0, 70))
-    ax.legend(loc=0)
+    ax.legend(loc='best')
 
 
 def test_cross_figure_patch_legend():
@@ -416,6 +400,21 @@ def test_nanscatter():
 
     ax.legend()
     ax.grid(True)
+
+
+def test_legend_repeatcheckok():
+    fig, ax = plt.subplots()
+    ax.scatter(0.0, 1.0, color='k', marker='o', label='test')
+    ax.scatter(0.5, 0.0, color='r', marker='v', label='test')
+    hl = ax.legend()
+    hand, lab = mlegend._get_legend_handles_labels([ax])
+    assert len(lab) == 2
+    fig, ax = plt.subplots()
+    ax.scatter(0.0, 1.0, color='k', marker='o', label='test')
+    ax.scatter(0.5, 0.0, color='k', marker='v', label='test')
+    hl = ax.legend()
+    hand, lab = mlegend._get_legend_handles_labels([ax])
+    assert len(lab) == 2
 
 
 @image_comparison(baseline_images=['not_covering_scatter'], extensions=['png'])
@@ -479,3 +478,36 @@ def test_shadow_framealpha():
     ax.plot(range(100), label="test")
     leg = ax.legend(shadow=True, facecolor='w')
     assert leg.get_frame().get_alpha() == 1
+
+
+def test_legend_title_empty():
+    # test that if we don't set the legend title, that
+    # it comes back as an empty string, and that it is not
+    # visible:
+    fig, ax = plt.subplots()
+    ax.plot(range(10))
+    leg = ax.legend()
+    assert leg.get_title().get_text() == ""
+    assert leg.get_title().get_visible() is False
+
+
+def test_legend_proper_window_extent():
+    # test that legend returns the expected extent under various dpi...
+    fig, ax = plt.subplots(dpi=100)
+    ax.plot(range(10), label='Aardvark')
+    leg = ax.legend()
+    x01 = leg.get_window_extent(fig.canvas.get_renderer()).x0
+
+    fig, ax = plt.subplots(dpi=200)
+    ax.plot(range(10), label='Aardvark')
+    leg = ax.legend()
+    x02 = leg.get_window_extent(fig.canvas.get_renderer()).x0
+    assert pytest.approx(x01*2, 0.1) == x02
+
+
+def test_legend_title_fontsize():
+    # test the title_fontsize kwarg
+    fig, ax = plt.subplots()
+    ax.plot(range(10))
+    leg = ax.legend(title='Aardvark', title_fontsize=22)
+    assert leg.get_title().get_fontsize() == 22

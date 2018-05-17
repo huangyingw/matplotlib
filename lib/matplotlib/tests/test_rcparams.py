@@ -1,20 +1,13 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import six
 
-import io
-import os
-import warnings
 from collections import OrderedDict
+import os
+from unittest import mock
+import warnings
 
 from cycler import cycler, Cycler
 import pytest
 
-try:
-    from unittest import mock
-except ImportError:
-    import mock
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -30,6 +23,7 @@ from matplotlib.rcsetup import (validate_bool_maybe_none,
                                 validate_cycler,
                                 validate_hatch,
                                 validate_hist_bins,
+                                validate_markevery,
                                 _validate_linestyle)
 
 
@@ -75,8 +69,7 @@ def test_RcParams_class():
                        'font.weight': 'normal',
                        'font.size': 12})
 
-    if six.PY3:
-        expected_repr = """
+    expected_repr = """
 RcParams({'font.cursive': ['Apple Chancery',
                            'Textile',
                            'Zapf Chancery',
@@ -84,28 +77,12 @@ RcParams({'font.cursive': ['Apple Chancery',
           'font.family': ['sans-serif'],
           'font.size': 12.0,
           'font.weight': 'normal'})""".lstrip()
-    else:
-        expected_repr = """
-RcParams({u'font.cursive': [u'Apple Chancery',
-                            u'Textile',
-                            u'Zapf Chancery',
-                            u'cursive'],
-          u'font.family': [u'sans-serif'],
-          u'font.size': 12.0,
-          u'font.weight': u'normal'})""".lstrip()
 
     assert expected_repr == repr(rc)
 
-    if six.PY3:
-        expected_str = """
+    expected_str = """
 font.cursive: ['Apple Chancery', 'Textile', 'Zapf Chancery', 'cursive']
 font.family: ['sans-serif']
-font.size: 12.0
-font.weight: normal""".lstrip()
-    else:
-        expected_str = """
-font.cursive: [u'Apple Chancery', u'Textile', u'Zapf Chancery', u'cursive']
-font.family: [u'sans-serif']
 font.size: 12.0
 font.weight: normal""".lstrip()
 
@@ -144,7 +121,7 @@ def test_Bug_2543():
     # accept None as an argument.
     # https://github.com/matplotlib/matplotlib/issues/2543
     # We filter warnings at this stage since a number of them are raised
-    # for deprecated rcparams as they should. We dont want these in the
+    # for deprecated rcparams as they should. We don't want these in the
     # printed in the test suite.
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore',
@@ -161,11 +138,6 @@ def test_Bug_2543():
         # real test is that this does not raise
         assert validate_bool_maybe_none(None) is None
         assert validate_bool_maybe_none("none") is None
-        _fonttype = mpl.rcParams['svg.fonttype']
-        assert _fonttype == mpl.rcParams['svg.embed_char_paths']
-        with mpl.rc_context():
-            mpl.rcParams['svg.embed_char_paths'] = False
-            assert mpl.rcParams['svg.fonttype'] == "none"
 
     with pytest.raises(ValueError):
         validate_bool_maybe_none("blah")
@@ -207,6 +179,18 @@ def test_legend_colors(color_type, param_dict, target):
         ax.plot(range(3), label='test')
         leg = ax.legend()
         assert getattr(leg.legendPatch, get_func)() == target
+
+
+def test_mfc_rcparams():
+    mpl.rcParams['lines.markerfacecolor'] = 'r'
+    ln = mpl.lines.Line2D([1, 2], [1, 2])
+    assert ln.get_markerfacecolor() == 'r'
+
+
+def test_mec_rcparams():
+    mpl.rcParams['lines.markeredgecolor'] = 'r'
+    ln = mpl.lines.Line2D([1, 2], [1, 2])
+    assert ln.get_markeredgecolor() == 'r'
 
 
 def test_Issue_1713():
@@ -355,6 +339,35 @@ def generate_validator_testcases(valid):
                      ),
          'fail': (('aardvark', ValueError),
                   )
+         },
+         {'validator': validate_markevery,
+          'success': ((None, None),
+                      (1, 1),
+                      (0.1, 0.1),
+                      ((1, 1), (1, 1)),
+                      ((0.1, 0.1), (0.1, 0.1)),
+                      ([1, 2, 3], [1, 2, 3]),
+                      (slice(2), slice(None, 2, None)),
+                      (slice(1, 2, 3), slice(1, 2, 3))
+                      ),
+          'fail': (((1, 2, 3), TypeError),
+                   ([1, 2, 0.3], TypeError),
+                   (['a', 2, 3], TypeError),
+                   ([1, 2, 'a'], TypeError),
+                   ((0.1, 0.2, 0.3), TypeError),
+                   ((0.1, 2, 3), TypeError),
+                   ((1, 0.2, 0.3), TypeError),
+                   ((1, 0.1), TypeError),
+                   ((0.1, 1), TypeError),
+                   (('abc'), TypeError),
+                   ((1, 'a'), TypeError),
+                   ((0.1, 'b'), TypeError),
+                   (('a', 1), TypeError),
+                   (('a', 0.1), TypeError),
+                   ('abc', TypeError),
+                   ('a', TypeError),
+                   (object(), TypeError)
+                   )
          }
     )
 
@@ -441,7 +454,65 @@ def test_rcparams_reset_after_fail():
         assert mpl.rcParams['text.usetex'] is False
 
         with pytest.raises(KeyError):
-            with mpl.rc_context(rc=OrderedDict([('text.usetex', True),('test.blah', True)])):
+            with mpl.rc_context(rc=OrderedDict([('text.usetex', True),
+                                                ('test.blah', True)])):
                 pass
 
         assert mpl.rcParams['text.usetex'] is False
+
+
+def test_if_rctemplate_is_up_to_date():
+    # This tests if the matplotlibrc.template file
+    # contains all valid rcParams.
+    dep1 = mpl._all_deprecated
+    dep2 = mpl._deprecated_set
+    deprecated = list(dep1.union(dep2))
+    path_to_rc = os.path.join(mpl.get_data_path(), 'matplotlibrc')
+    with open(path_to_rc, "r") as f:
+        rclines = f.readlines()
+    missing = {}
+    for k, v in mpl.defaultParams.items():
+        if k[0] == "_":
+            continue
+        if k in deprecated:
+            continue
+        if "verbose" in k:
+            continue
+        found = False
+        for line in rclines:
+            if k in line:
+                found = True
+        if not found:
+            missing.update({k: v})
+    if missing:
+        raise ValueError("The following params are missing " +
+                         "in the matplotlibrc.template file: {}"
+                         .format(missing.items()))
+
+
+def test_if_rctemplate_would_be_valid(tmpdir):
+    # This tests if the matplotlibrc.template file would result in a valid
+    # rc file if all lines are uncommented.
+    path_to_rc = os.path.join(mpl.get_data_path(), 'matplotlibrc')
+    with open(path_to_rc, "r") as f:
+        rclines = f.readlines()
+    newlines = []
+    for line in rclines:
+        if line[0] == "#":
+            newline = line[1:]
+        else:
+            newline = line
+        if "$TEMPLATE_BACKEND" in newline:
+            newline = "backend : Agg"
+        if "datapath" in newline:
+            newline = ""
+        newlines.append(newline)
+    d = tmpdir.mkdir('test1')
+    fname = str(d.join('testrcvalid.temp'))
+    with open(fname, "w") as f:
+        f.writelines(newlines)
+    with pytest.warns(None) as record:
+        mpl.rc_params_from_file(fname,
+                                fail_on_error=True,
+                                use_default_template=False)
+        assert len(record) == 0

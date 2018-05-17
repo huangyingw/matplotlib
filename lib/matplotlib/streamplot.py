@@ -2,13 +2,9 @@
 Streamline plotting for 2D vector fields.
 
 """
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-import six
-from six.moves import xrange
 
 import numpy as np
+
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
@@ -112,8 +108,8 @@ def streamplot(axes, x, y, u, v, density=1, linewidth=None, color=None,
     use_multicolor_lines = isinstance(color, np.ndarray)
     if use_multicolor_lines:
         if color.shape != grid.shape:
-            msg = "If 'color' is given, must have the shape of 'Grid(x,y)'"
-            raise ValueError(msg)
+            raise ValueError(
+                "If 'color' is given, must have the shape of 'Grid(x,y)'")
         line_colors = []
         color = np.ma.masked_invalid(color)
     else:
@@ -122,8 +118,8 @@ def streamplot(axes, x, y, u, v, density=1, linewidth=None, color=None,
 
     if isinstance(linewidth, np.ndarray):
         if linewidth.shape != grid.shape:
-            msg = "If 'linewidth' is given, must have the shape of 'Grid(x,y)'"
-            raise ValueError(msg)
+            raise ValueError(
+                "If 'linewidth' is given, must have the shape of 'Grid(x,y)'")
         line_kw['linewidth'] = []
     else:
         line_kw['linewidth'] = linewidth
@@ -133,9 +129,8 @@ def streamplot(axes, x, y, u, v, density=1, linewidth=None, color=None,
     arrow_kw['zorder'] = zorder
 
     ## Sanity checks.
-    if (u.shape != grid.shape) or (v.shape != grid.shape):
-        msg = "'u' and 'v' must be of shape 'Grid(x,y)'"
-        raise ValueError(msg)
+    if u.shape != grid.shape or v.shape != grid.shape:
+        raise ValueError("'u' and 'v' must be of shape 'Grid(x,y)'")
 
     u = np.ma.masked_invalid(u)
     v = np.ma.masked_invalid(v)
@@ -263,8 +258,8 @@ class DomainMap(object):
         self.grid = grid
         self.mask = mask
         # Constants for conversion between grid- and mask-coordinates
-        self.x_grid2mask = float(mask.nx - 1) / grid.nx
-        self.y_grid2mask = float(mask.ny - 1) / grid.ny
+        self.x_grid2mask = (mask.nx - 1) / grid.nx
+        self.y_grid2mask = (mask.ny - 1) / grid.ny
 
         self.x_mask2grid = 1. / self.x_grid2mask
         self.y_mask2grid = 1. / self.y_grid2mask
@@ -554,7 +549,7 @@ def _integrate_rk12(x0, y0, dmap, f, maxlength):
                 dmap.update_trajectory(xi, yi)
             except InvalidIndexError:
                 break
-            if (stotal + ds) > maxlength:
+            if stotal + ds > maxlength:
                 break
             stotal += ds
 
@@ -649,7 +644,7 @@ def _gen_starting_points(shape):
     x, y = 0, 0
     i = 0
     direction = 'right'
-    for i in xrange(nx * ny):
+    for i in range(nx * ny):
 
         yield x, y
 

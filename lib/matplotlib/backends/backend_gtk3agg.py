@@ -1,18 +1,12 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-import six
-
 import numpy as np
 import warnings
 
 from . import backend_agg, backend_gtk3
 from .backend_cairo import cairo, HAS_CAIRO_CFFI
 from .backend_gtk3 import _BackendGTK3
-from matplotlib.figure import Figure
 from matplotlib import transforms
 
-if six.PY3 and not HAS_CAIRO_CFFI:
+if not HAS_CAIRO_CFFI:
     warnings.warn(
         "The Gtk3Agg backend is known to not work on Python 3.x with pycairo. "
         "Try installing cairocffi.")
@@ -42,7 +36,7 @@ class FigureCanvasGTK3Agg(backend_gtk3.FigureCanvasGTK3,
         else:
             bbox_queue = self._bbox_queue
 
-        if HAS_CAIRO_CFFI:
+        if HAS_CAIRO_CFFI and not isinstance(ctx, cairo.Context):
             ctx = cairo.Context._from_pointer(
                 cairo.ffi.cast('cairo_t **',
                                id(ctx) + object.__basicsize__)[0],

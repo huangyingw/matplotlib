@@ -192,7 +192,6 @@ Clearing
    Axes.clear
 
 
-
 Appearance
 ==========
 
@@ -214,14 +213,11 @@ Appearance
 
    Axes.grid
 
-   Axes.get_axis_bgcolor
    Axes.get_facecolor
    Axes.get_fc
 
    Axes.set_facecolor
    Axes.set_fc
-   Axes.set_axis_bgcolor
-
 
 
 Property cycle
@@ -233,7 +229,6 @@ Property cycle
    :nosignatures:
 
    Axes.set_prop_cycle
-   Axes.set_color_cycle
 
 
 Axis / limits
@@ -498,7 +493,6 @@ Interactive
    Axes.format_xdata
    Axes.format_ydata
 
-   Axes.hitlist
    Axes.mouseover
    Axes.in_axes
 
@@ -514,8 +508,6 @@ Interactive
    Axes.contains_point
 
    Axes.get_cursor_data
-   Axes.get_cursor_props
-   Axes.set_cursor_props
 
 Children
 ========
@@ -659,8 +651,6 @@ Other
    Axes.get_default_bbox_extra_artists
    Axes.get_transformed_clip_path_and_affine
    Axes.has_data
-   Axes.hold
-   Axes.ishold
 
 
 Inheritance

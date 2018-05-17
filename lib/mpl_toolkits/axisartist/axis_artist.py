@@ -59,7 +59,7 @@ the direction of the increasing coordinate),
 The text angles are actually relative to (90 + angle of the direction
 to the ticklabel), which gives 0 for bottom axis.
 
-                        left bottom right top
+ Parameter              left bottom right top
  ticklabels location    left right  right left
  axislabel location     left right  right left
  ticklabels angle       90    0      -90  180
@@ -83,24 +83,20 @@ Following attributes can be customized (use set_xxx method)
  * AxisLabel : pad
 
 """
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
 
 import six
 
 # FIXME :
+# angles are given in data coordinate - need to convert it to canvas coordinate
 
-# * : angles are given in data coordinate - need to convert it to canvas coordinate
 
-
-import matplotlib.axes as maxes
 import matplotlib.artist as martist
 import matplotlib.text as mtext
 import matplotlib.font_manager as font_manager
 
 from matplotlib.path import Path
-from matplotlib.transforms import Affine2D, ScaledTranslation, \
-     IdentityTransform, TransformedPath, Bbox
+from matplotlib.transforms import (
+    Affine2D, Bbox, IdentityTransform, ScaledTranslation, TransformedPath)
 from matplotlib.collections import LineCollection
 
 from matplotlib import rcParams
@@ -177,7 +173,7 @@ class AttributeCopier(object):
     def __init__(self, ref_artist, klass=Artist):
         self._klass = klass
         self._ref_artist = ref_artist
-        super(AttributeCopier, self).__init__()
+        super().__init__()
 
     def set_ref_artist(self, artist):
         self._ref_artist = artist
@@ -214,13 +210,13 @@ class Ticks(Line2D, AttributeCopier):
     set_tick_out(False).
     """
 
-    def __init__(self, ticksize, tick_out=False, **kwargs):
+    def __init__(self, ticksize, tick_out=False, *, axis=None, **kwargs):
         self._ticksize = ticksize
         self.locs_angles_labels = []
 
         self.set_tick_out(tick_out)
 
-        self._axis = kwargs.pop("axis", None)
+        self._axis = axis
         if self._axis is not None:
             if "color" not in kwargs:
                 kwargs["color"] = "auto"
@@ -312,7 +308,6 @@ class Ticks(Line2D, AttributeCopier):
 
 
         gc = renderer.new_gc()
-        self._set_gc_clip(gc)
         gc.set_foreground(self.get_markeredgecolor())
         gc.set_linewidth(self.get_markeredgewidth())
         gc.set_alpha(self._alpha)
@@ -329,30 +324,14 @@ class Ticks(Line2D, AttributeCopier):
         marker_transform = marker_scale + marker_rotation
 
         for loc, angle in self.locs_angles:
-            marker_rotation.rotate_deg(angle+add_angle)
-            locs = path_trans.transform_non_affine(np.array([loc, loc]))
+            marker_rotation.clear().rotate_deg(angle+add_angle)
+            locs = path_trans.transform_non_affine([loc])
+            if self.axes and not self.axes.viewLim.contains(*locs[0]):
+                continue
             renderer.draw_markers(gc, self._tickvert_path, marker_transform,
                                   Path(locs), path_trans.get_affine())
-            marker_rotation.clear()
 
         gc.restore()
-
-
-def test_ticks():
-    import matplotlib.pyplot as plt
-    fig = plt.figure(1)
-    fig.clf()
-    ax = fig.add_subplot(111)
-    ax.xaxis.set_visible(False)
-    ax.yaxis.set_visible(False)
-    ticks = Ticks(ticksize=10, axis=ax.xaxis)
-    ax.add_artist(ticks)
-    locs_angles = [((0.2, 0.), 90),
-                          ((0.4, 0.), 120)]
-    ticks.set_locs_angles(locs_angles)
-    plt.draw()
-
-
 
 
 class LabelBase(mtext.Text):
@@ -367,8 +346,7 @@ class LabelBase(mtext.Text):
         self._ref_angle = 0
         self._offset_radius = 0.
 
-        super(LabelBase, self).__init__(*kl,
-                                        **kwargs)
+        super().__init__(*kl, **kwargs)
 
         self.set_rotation_mode("anchor")
         self._text_follow_ref_angle = True
@@ -425,7 +403,7 @@ class LabelBase(mtext.Text):
         dx, dy = dd * np.cos(theta), dd * np.sin(theta)
         offset_tr.translate(dx, dy)
         self.set_rotation(text_ref_angle+angle_orig)
-        super(LabelBase, self).draw(renderer)
+        super().draw(renderer)
         offset_tr.clear()
 
 
@@ -454,7 +432,7 @@ class LabelBase(mtext.Text):
         offset_tr.translate(dx, dy)
         self.set_rotation(text_ref_angle+angle_orig)
 
-        bbox = super(LabelBase, self).get_window_extent(renderer).frozen()
+        bbox = super().get_window_extent(renderer).frozen()
 
         offset_tr.clear()
 
@@ -466,33 +444,6 @@ class LabelBase(mtext.Text):
         return bbox
 
 
-
-def test_labelbase():
-    import matplotlib.pyplot as plt
-    fig = plt.figure(1)
-    fig.clf()
-    ax = fig.add_subplot(111)
-
-    ax.plot([0.5], [0.5], "o")
-    label = LabelBase(0.5, 0.5, "Test")
-
-    a = -90
-    label._set_ref_angle(a)
-    label._set_offset_radius(offset_radius=50)
-    label.set_rotation(-90)
-    label.set(ha="center", va="top")
-
-    ax.add_artist(label)
-    plt.draw()
-
-
-
-
-
-
-
-
-
 class AxisLabel(LabelBase, AttributeCopier):
     """
     Axis Label. Derived from Text. The position of the text is updated
@@ -502,12 +453,10 @@ class AxisLabel(LabelBase, AttributeCopier):
     To change the pad between ticklabels and axis label, use set_pad.
     """
 
-    def __init__(self, *kl, **kwargs):
+    def __init__(self, *args, axis_direction="bottom", axis=None, **kwargs):
 
-        axis_direction = kwargs.pop("axis_direction", "bottom")
-        self._axis = kwargs.pop("axis", None)
-        #super(AxisLabel, self).__init__(*kl, **kwargs)
-        LabelBase.__init__(self, *kl, **kwargs)
+        self._axis = axis
+        LabelBase.__init__(self, *args, **kwargs)
         AttributeCopier.__init__(self, self._axis, klass=LabelBase)
 
         self.set_axis_direction(axis_direction)
@@ -549,7 +498,7 @@ class AxisLabel(LabelBase, AttributeCopier):
 
 
     def get_text(self):
-        t = super(AxisLabel, self).get_text()
+        t = super().get_text()
         if t == "__from_axes__":
             return self._axis.get_label().get_text()
         return self._text
@@ -619,7 +568,7 @@ class AxisLabel(LabelBase, AttributeCopier):
         r = self._get_external_pad() + pad
         self._set_offset_radius(r)
 
-        super(AxisLabel, self).draw(renderer)
+        super().draw(renderer)
 
 
     def get_window_extent(self, renderer):
@@ -631,7 +580,7 @@ class AxisLabel(LabelBase, AttributeCopier):
         r = self._get_external_pad() + pad
         self._set_offset_radius(r)
 
-        bb = super(AxisLabel, self).get_window_extent(renderer)
+        bb = super().get_window_extent(renderer)
 
         return bb
 
@@ -648,15 +597,12 @@ class TickLabels(AxisLabel, AttributeCopier): # mtext.Text
     To change the pad between ticks and ticklabels, use set_pad.
     """
 
-    def __init__(self, **kwargs):
-
-        axis_direction = kwargs.pop("axis_direction", "bottom")
+    def __init__(self, *, axis_direction="bottom", **kwargs):
         AxisLabel.__init__(self, **kwargs)
         self.set_axis_direction(axis_direction)
         #self._axis_direction = axis_direction
         self._axislabel_pad = 0
         #self._extra_pad = 0
-
 
     # attribute copier
     def get_ref_artist(self):
@@ -789,7 +735,8 @@ class TickLabels(AxisLabel, AttributeCopier): # mtext.Text
         #self._set_offset_radius(r)
 
         for (x, y), a, l in self._locs_angles_labels:
-            if not l.strip(): continue
+            if not l.strip():
+                continue
             self._set_ref_angle(a) #+ add_angle
             self.set_x(x)
             self.set_y(y)
@@ -839,65 +786,24 @@ class TickLabels(AxisLabel, AttributeCopier): # mtext.Text
         """
         whd_list = []
         for (x, y), a, l in self._locs_angles_labels:
-            if not l.strip(): continue
+            if not l.strip():
+                continue
             clean_line, ismath = self.is_math_text(l)
             whd = renderer.get_text_width_height_descent(
                 clean_line, self._fontproperties, ismath=ismath)
             whd_list.append(whd)
-
         return whd_list
 
 
-
-def test_ticklabels():
-    import matplotlib.pyplot as plt
-    fig = plt.figure(1)
-    fig.clf()
-    ax = fig.add_subplot(111)
-    ax.xaxis.set_visible(False)
-    ax.yaxis.set_visible(False)
-    ax.plot([0.2, 0.4], [0.5, 0.5], "o")
-    ticks = Ticks(ticksize=10, axis=ax.xaxis)
-    ax.add_artist(ticks)
-    locs_angles_labels = [((0.2, 0.5), -90, "0.2"),
-                          ((0.4, 0.5), -120, "0.4")]
-    tick_locs_angles = [(xy, a+180) for xy, a, l in locs_angles_labels]
-    ticks.set_locs_angles(tick_locs_angles)
-
-
-    ax.plot([0.5], [0.5], ",")
-    axislabel = AxisLabel(0.5, 0.5, "Test")
-    axislabel._set_offset_radius(20)
-    axislabel._set_ref_angle(0)
-    axislabel.set_axis_direction("bottom")
-    #axislabel._text_follow_ref_angle = True
-    #axislabel.set(va="center", ha="right")
-    ax.add_artist(axislabel)
-
-    if 1:
-        ticklabels = TickLabels(axis_direction="left")
-        ticklabels._locs_angles_labels = locs_angles_labels
-        #ticklabels.set_rotation(90)
-        ticklabels.set_pad(10)
-
-        ax.add_artist(ticklabels)
-
-    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-
-    plt.draw()
-
-
-
-
 class GridlinesCollection(LineCollection):
-    def __init__(self, *kl, **kwargs):
+    def __init__(self, *args, which="major", axis="both", **kwargs):
         """
         *which* : "major" or "minor"
         *axis* : "both", "x" or "y"
         """
-        self._which = kwargs.pop("which", "major")
-        self._axis = kwargs.pop("axis", "both")
-        super(GridlinesCollection, self).__init__(*kl, **kwargs)
+        self._which = which
+        self._axis = axis
+        super().__init__(*args, **kwargs)
         self.set_grid_helper(None)
 
     def set_which(self, which):
@@ -917,7 +823,7 @@ class GridlinesCollection(LineCollection):
                 self.set_segments([np.transpose(l) for l in gl])
             else:
                 self.set_segments([])
-        super(GridlinesCollection, self).draw(renderer)
+        super().draw(renderer)
 
 
 
@@ -930,14 +836,13 @@ class AxisArtist(martist.Artist):
 
     ZORDER=2.5
 
-    # LABELPAD : as property
-    def _set_labelpad(self, v):
-        return self.label.set_pad(v)
-
-    def _get_labelpad(self):
+    @property
+    def LABELPAD(self):
         return self.label.get_pad()
 
-    LABELPAD = property(_get_labelpad, _set_labelpad)
+    @LABELPAD.setter
+    def LABELPAD(self, v):
+        return self.label.set_pad(v)
 
     def __init__(self, axes,
                  helper,
@@ -950,7 +855,7 @@ class AxisArtist(martist.Artist):
         """
         #axes is also used to follow the axis attribute (tick color, etc).
 
-        super(AxisArtist, self).__init__(**kw)
+        super().__init__(**kw)
 
         self.axes = axes
 
@@ -1430,7 +1335,6 @@ class AxisArtist(martist.Artist):
 
         #pad_points = self.major_tick_pad
 
-        #print self._ticklabel_add_angle - self._axislabel_add_angle
         #if abs(self._ticklabel_add_angle - self._axislabel_add_angle)%360 > 90:
         if self._ticklabel_add_angle != self._axislabel_add_angle:
             if (self.major_ticks.get_visible() and not self.major_ticks.get_tick_out()) \
@@ -1475,7 +1379,6 @@ class AxisArtist(martist.Artist):
 
         #pad_points = self.major_tick_pad
 
-        #print self._ticklabel_add_angle - self._axislabel_add_angle
         #if abs(self._ticklabel_add_angle - self._axislabel_add_angle)%360 > 90:
         if self._ticklabel_add_angle != self._axislabel_add_angle:
             if (self.major_ticks.get_visible() and not self.major_ticks.get_tick_out()) \
@@ -1615,81 +1518,3 @@ class AxisArtist(martist.Artist):
             self.minor_ticklabels.set_visible(_ticklabels)
         if _label is not None:
             self.label.set_visible(_label)
-
-
-
-
-
-def test_axis_artist():
-    global axisline
-
-    #self._axislines[loc] = new_fixed_axis(loc=loc, axes=axes)
-    from mpl_toolkits.axisartist import AxisArtistHelperRectlinear
-    fig = plt.figure(1)
-    fig.clf()
-    ax=fig.add_subplot(111)
-    ax.xaxis.set_visible(False)
-    ax.yaxis.set_visible(False)
-
-    if 1:
-
-        _helper = AxisArtistHelperRectlinear.Fixed(ax, loc="left")
-        axisline = AxisArtist(ax, _helper, offset=None, axis_direction="left")
-        ax.add_artist(axisline)
-        _helper = AxisArtistHelperRectlinear.Fixed(ax, loc="right")
-        axisline = AxisArtist(ax, _helper, offset=None, axis_direction="right")
-        ax.add_artist(axisline)
-
-    _helper = AxisArtistHelperRectlinear.Fixed(ax, loc="bottom")
-    axisline = AxisArtist(ax, _helper, offset=None, axis_direction="bottom")
-    axisline.set_label("TTT")
-    #axisline.label.set_visible(False)
-    ax.add_artist(axisline)
-
-    #axisline.major_ticklabels.set_axis_direction("bottom")
-    axisline.major_ticks.set_tick_out(False)
-
-    ax.set_ylabel("Test")
-
-    axisline.label.set_pad(5)
-
-
-    plt.draw()
-
-def test_axis_artist2():
-    global axisline
-
-    #self._axislines[loc] = new_fixed_axis(loc=loc, axes=axes)
-    from mpl_toolkits.axislines import AxisArtistHelperRectlinear
-    fig = plt.figure(1)
-    fig.clf()
-    ax=fig.add_subplot(111)
-    ax.xaxis.set_visible(False)
-    ax.yaxis.set_visible(False)
-
-
-    _helper = AxisArtistHelperRectlinear.Fixed(ax, loc="bottom")
-    axisline = AxisArtist(ax, _helper, offset=None, axis_direction="bottom")
-    axisline.set_label("TTT")
-    ax.add_artist(axisline)
-
-    #axisline.major_ticklabels.set_axis_direction("bottom")
-    axisline.major_ticks.set_tick_out(False)
-
-
-    ax.set_ylabel("Test")
-
-    plt.draw()
-
-if __name__ == "__main__":
-    #test_labelbase()
-    #test_ticklabels()
-    test_axis_artist()
-    #test_axis_artist2()
-
-
-# DONE
-# *. ticks, ticklabels, axislabels
-# *. workon axisartist
-
-# TODO

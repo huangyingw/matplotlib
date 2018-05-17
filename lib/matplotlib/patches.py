@@ -1,41 +1,28 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import six
 from six.moves import map, zip
-import warnings
 
 import math
+from numbers import Number
+import warnings
+
+import numpy as np
 
 import matplotlib as mpl
-import numpy as np
-import matplotlib.cbook as cbook
-import matplotlib.artist as artist
-from matplotlib.artist import allow_rasterization
-import matplotlib.colors as colors
-from matplotlib import docstring
-import matplotlib.transforms as transforms
-from matplotlib.path import Path
-import matplotlib.lines as mlines
-
-from matplotlib.bezier import split_bezier_intersecting_with_closedpath
-from matplotlib.bezier import get_intersection, inside_circle, get_parallels
-from matplotlib.bezier import make_wedged_bezier2
-from matplotlib.bezier import split_path_inout, get_cos_sin
-from matplotlib.bezier import make_path_regular, concatenate_paths
+from . import artist, cbook, colors, docstring, lines as mlines, transforms
+from .bezier import (
+    concatenate_paths, get_cos_sin, get_intersection, get_parallels,
+    inside_circle, make_path_regular, make_wedged_bezier2,
+    split_bezier_intersecting_with_closedpath, split_path_inout)
+from .path import Path
 
 
-_patch_alias_map = {
-        'antialiased': ['aa'],
-        'edgecolor': ['ec'],
-        'facecolor': ['fc'],
-        'linewidth': ['lw'],
-        'linestyle': ['ls']
-    }
-
-
+@cbook._define_aliases({
+    "antialiased": ["aa"],
+    "edgecolor": ["ec"],
+    "facecolor": ["fc"],
+    "linewidth": ["lw"],
+    "linestyle": ["ls"],
+})
 class Patch(artist.Artist):
     """
     A patch is a 2D artist with a face color and an edge color.
@@ -50,9 +37,6 @@ class Patch(artist.Artist):
     # Whether to draw an edge by default.  Set on a
     # subclass-by-subclass basis.
     _edge_default = False
-
-    def __str__(self):
-        return str(self.__class__).split('.')[-1]
 
     def __init__(self,
                  edgecolor=None,
@@ -128,7 +112,7 @@ class Patch(artist.Artist):
     def _process_radius(self, radius):
         if radius is not None:
             return radius
-        if cbook.is_numlike(self._picker):
+        if isinstance(self._picker, Number):
             _radius = self._picker
         else:
             if self.get_edgecolor()[3] == 0:
@@ -151,13 +135,29 @@ class Patch(artist.Artist):
 
     def contains_point(self, point, radius=None):
         """
-        Returns *True* if the given point is inside the path
+        Returns ``True`` if the given *point* is inside the path
         (transformed with its transform attribute).
+
+        *radius* allows the path to be made slightly larger or smaller.
         """
         radius = self._process_radius(radius)
         return self.get_path().contains_point(point,
                                               self.get_transform(),
                                               radius)
+
+    def contains_points(self, points, radius=None):
+        """
+        Returns a bool array which is ``True`` if the (closed) path
+        contains the corresponding point.
+        (transformed with its transform attribute).
+
+        *points* must be Nx2 array.
+        *radius* allows the path to be made slightly larger or smaller.
+        """
+        radius = self._process_radius(radius)
+        return self.get_path().contains_points(points,
+                                               self.get_transform(),
+                                               radius)
 
     def update_from(self, other):
         """
@@ -246,18 +246,17 @@ class Patch(artist.Artist):
 
     def set_antialiased(self, aa):
         """
-        Set whether to use antialiased rendering
+        Set whether to use antialiased rendering.
 
-        ACCEPTS: [True | False]  or None for default
+        Parameters
+        ----------
+        b : bool or None
+            .. ACCEPTS: bool or None
         """
         if aa is None:
             aa = mpl.rcParams['patch.antialiased']
         self._antialiased = aa
         self.stale = True
-
-    def set_aa(self, aa):
-        """alias for set_antialiased"""
-        return self.set_antialiased(aa)
 
     def _set_edgecolor(self, color):
         set_hatch_color = True
@@ -283,10 +282,6 @@ class Patch(artist.Artist):
         self._original_edgecolor = color
         self._set_edgecolor(color)
 
-    def set_ec(self, color):
-        """alias for set_edgecolor"""
-        return self.set_edgecolor(color)
-
     def _set_facecolor(self, color):
         if color is None:
             color = mpl.rcParams['patch.facecolor']
@@ -302,10 +297,6 @@ class Patch(artist.Artist):
         """
         self._original_facecolor = color
         self._set_facecolor(color)
-
-    def set_fc(self, color):
-        """alias for set_facecolor"""
-        return self.set_facecolor(color)
 
     def set_color(self, c):
         """
@@ -355,10 +346,6 @@ class Patch(artist.Artist):
             offset, ls, self._linewidth)
         self.stale = True
 
-    def set_lw(self, lw):
-        """alias for set_linewidth"""
-        return self.set_linewidth(lw)
-
     def set_linestyle(self, ls):
         """
         Set the patch linestyle
@@ -399,15 +386,14 @@ class Patch(artist.Artist):
             offset, ls, self._linewidth)
         self.stale = True
 
-    def set_ls(self, ls):
-        """alias for set_linestyle"""
-        return self.set_linestyle(ls)
-
     def set_fill(self, b):
         """
-        Set whether to fill the patch
+        Set whether to fill the patch.
 
-        ACCEPTS: [True | False]
+        Parameters
+        ----------
+        b : bool
+            .. ACCEPTS: bool
         """
         self._fill = bool(b)
         self._set_facecolor(self._original_facecolor)
@@ -490,7 +476,7 @@ class Patch(artist.Artist):
         'Return the current hatching pattern'
         return self._hatch
 
-    @allow_rasterization
+    @artist.allow_rasterization
     def draw(self, renderer):
         'Draw the :class:`Patch` to the given *renderer*.'
         if not self.get_visible():
@@ -643,29 +629,43 @@ class Rectangle(Patch):
     """
 
     def __str__(self):
-        pars = self._x, self._y, self._width, self._height, self.angle
+        pars = self._x0, self._y0, self._width, self._height, self.angle
         fmt = "Rectangle(xy=(%g, %g), width=%g, height=%g, angle=%g)"
         return fmt % pars
 
     @docstring.dedent_interpd
     def __init__(self, xy, width, height, angle=0.0, **kwargs):
         """
+        Parameters
+        ----------
+        xy: length-2 tuple
+            The bottom and left rectangle coordinates
+        width:
+            Rectangle width
+        height:
+            Rectangle height
+        angle: float, optional
+          rotation in degrees anti-clockwise about *xy* (default is 0.0)
+        fill: bool, optional
+            Whether to fill the rectangle (default is ``True``)
 
-        *angle*
-          rotation in degrees (anti-clockwise)
-
-        *fill* is a boolean indicating whether to fill the rectangle
-
+        Notes
+        -----
         Valid kwargs are:
         %(Patch)s
         """
 
         Patch.__init__(self, **kwargs)
 
-        self._x = xy[0]
-        self._y = xy[1]
+        self._x0 = xy[0]
+        self._y0 = xy[1]
+
         self._width = width
         self._height = height
+
+        self._x1 = self._x0 + self._width
+        self._y1 = self._y0 + self._height
+
         self.angle = float(angle)
         # Note: This cannot be calculated until this is added to an Axes
         self._rect_transform = transforms.IdentityTransform()
@@ -682,15 +682,28 @@ class Rectangle(Patch):
                  makes it very important to call the accessor method and
                  not directly access the transformation member variable.
         """
-        x = self.convert_xunits(self._x)
-        y = self.convert_yunits(self._y)
-        width = self.convert_xunits(self._width)
-        height = self.convert_yunits(self._height)
-        bbox = transforms.Bbox.from_bounds(x, y, width, height)
+        x0, y0, x1, y1 = self._convert_units()
+        bbox = transforms.Bbox.from_extents(x0, y0, x1, y1)
         rot_trans = transforms.Affine2D()
-        rot_trans.rotate_deg_around(x, y, self.angle)
+        rot_trans.rotate_deg_around(x0, y0, self.angle)
         self._rect_transform = transforms.BboxTransformTo(bbox)
         self._rect_transform += rot_trans
+
+    def _update_x1(self):
+        self._x1 = self._x0 + self._width
+
+    def _update_y1(self):
+        self._y1 = self._y0 + self._height
+
+    def _convert_units(self):
+        '''
+        Convert bounds of the rectangle
+        '''
+        x0 = self.convert_xunits(self._x0)
+        y0 = self.convert_yunits(self._y0)
+        x1 = self.convert_xunits(self._x1)
+        y1 = self.convert_yunits(self._y1)
+        return x0, y0, x1, y1
 
     def get_patch_transform(self):
         self._update_patch_transform()
@@ -698,18 +711,18 @@ class Rectangle(Patch):
 
     def get_x(self):
         "Return the left coord of the rectangle"
-        return self._x
+        return self._x0
 
     def get_y(self):
         "Return the bottom coord of the rectangle"
-        return self._y
+        return self._y0
 
     def get_xy(self):
         "Return the left and bottom coords of the rectangle"
-        return self._x, self._y
+        return self._x0, self._y0
 
     def get_width(self):
-        "Return the width of the  rectangle"
+        "Return the width of the rectangle"
         return self._width
 
     def get_height(self):
@@ -717,21 +730,15 @@ class Rectangle(Patch):
         return self._height
 
     def set_x(self, x):
-        """
-        Set the left coord of the rectangle
-
-        ACCEPTS: float
-        """
-        self._x = x
+        "Set the left coord of the rectangle"
+        self._x0 = x
+        self._update_x1()
         self.stale = True
 
     def set_y(self, y):
-        """
-        Set the bottom coord of the rectangle
-
-        ACCEPTS: float
-        """
-        self._y = y
+        "Set the bottom coord of the rectangle"
+        self._y0 = y
+        self._update_y1()
         self.stale = True
 
     def set_xy(self, xy):
@@ -740,25 +747,21 @@ class Rectangle(Patch):
 
         ACCEPTS: 2-item sequence
         """
-        self._x, self._y = xy
+        self._x0, self._y0 = xy
+        self._update_x1()
+        self._update_y1()
         self.stale = True
 
     def set_width(self, w):
-        """
-        Set the width rectangle
-
-        ACCEPTS: float
-        """
+        "Set the width of the rectangle"
         self._width = w
+        self._update_x1()
         self.stale = True
 
     def set_height(self, h):
-        """
-        Set the width rectangle
-
-        ACCEPTS: float
-        """
+        "Set the height of the rectangle"
         self._height = h
+        self._update_y1()
         self.stale = True
 
     def set_bounds(self, *args):
@@ -767,19 +770,21 @@ class Rectangle(Patch):
 
         ACCEPTS: (left, bottom, width, height)
         """
-        if len(args) == 0:
+        if len(args) == 1:
             l, b, w, h = args[0]
         else:
             l, b, w, h = args
-        self._x = l
-        self._y = b
+        self._x0 = l
+        self._y0 = b
         self._width = w
         self._height = h
+        self._update_x1()
+        self._update_y1()
         self.stale = True
 
     def get_bbox(self):
-        return transforms.Bbox.from_bounds(self._x, self._y,
-                                           self._width, self._height)
+        x0, y0, x1, y1 = self._convert_units()
+        return transforms.Bbox.from_extents(x0, y0, x1, y1)
 
     xy = property(get_xy, set_xy)
 
@@ -789,7 +794,9 @@ class RegularPolygon(Patch):
     A regular polygon patch.
     """
     def __str__(self):
-        return "Poly%d(%g,%g)" % (self._numVertices, self._xy[0], self._xy[1])
+        s = "RegularPolygon((%g, %g), %d, radius=%g, orientation=%g)"
+        return s % (self._xy[0], self._xy[1], self._numVertices, self._radius,
+                    self._orientation)
 
     @docstring.dedent_interpd
     def __init__(self, xy, numVertices, radius=5, orientation=0,
@@ -875,7 +882,8 @@ class PathPatch(Patch):
     _edge_default = True
 
     def __str__(self):
-        return "Poly((%g, %g) ...)" % tuple(self._path.vertices[0])
+        s = "PathPatch%d((%g, %g) ...)"
+        return s % (len(self._path.vertices), *tuple(self._path.vertices[0]))
 
     @docstring.dedent_interpd
     def __init__(self, path, **kwargs):
@@ -903,7 +911,8 @@ class Polygon(Patch):
     A general polygon patch.
     """
     def __str__(self):
-        return "Poly((%g, %g) ...)" % tuple(self._path.vertices[0])
+        s = "Polygon%d((%g, %g) ...)"
+        return s % (len(self._path.vertices), *tuple(self._path.vertices[0]))
 
     @docstring.dedent_interpd
     def __init__(self, xy, closed=True, **kwargs):
@@ -1052,7 +1061,7 @@ class Wedge(Patch):
             # Partial annulus needs to draw the outer ring
             # followed by a reversed and scaled inner ring
             v1 = arc.vertices
-            v2 = arc.vertices[::-1] * float(self.r - self.width) / self.r
+            v2 = arc.vertices[::-1] * (self.r - self.width) / self.r
             v = np.vstack([v1, v2, v1[0, :], (0, 0)])
             c = np.hstack([arc.codes, arc.codes, connector, Path.CLOSEPOLY])
             c[len(arc.codes)] = connector
@@ -1146,8 +1155,8 @@ class Arrow(Patch):
         L = np.hypot(dx, dy)
 
         if L != 0:
-            cx = float(dx) / L
-            sx = float(dy) / L
+            cx = dx / L
+            sx = dy / L
         else:
             # Account for division by zero
             cx, sx = 0, 1
@@ -1184,7 +1193,7 @@ class FancyArrow(Polygon):
           *width*: float (default: 0.001)
             width of full arrow tail
 
-          *length_includes_head*: [True | False] (default: False)
+          *length_includes_head*: bool (default: False)
             True if head is to be counted in calculating the length.
 
           *head_width*: float or None (default: 3*width)
@@ -1200,7 +1209,7 @@ class FancyArrow(Polygon):
             fraction that the arrow is swept back (0 overhang means
             triangular shape). Can be negative or greater than one.
 
-          *head_starts_at_zero*: [True | False] (default: False)
+          *head_starts_at_zero*: bool (default: False)
             if True, the head starts being drawn at coordinate 0
             instead of ending at coordinate 0.
 
@@ -1225,10 +1234,10 @@ class FancyArrow(Polygon):
             # start by drawing horizontal arrow, point at (0,0)
             hw, hl, hs, lw = head_width, head_length, overhang, width
             left_half_arrow = np.array([
-                [0.0, 0.0],                  # tip
-                [-hl, -hw / 2.0],             # leftmost
-                [-hl * (1 - hs), -lw / 2.0],  # meets stem
-                [-length, -lw / 2.0],          # bottom left
+                [0.0, 0.0],                 # tip
+                [-hl, -hw / 2],             # leftmost
+                [-hl * (1 - hs), -lw / 2],  # meets stem
+                [-length, -lw / 2],         # bottom left
                 [-length, 0],
             ])
             # if we're not including the head, shift up by head length
@@ -1236,7 +1245,7 @@ class FancyArrow(Polygon):
                 left_half_arrow += [head_length, 0]
             # if the head starts at 0, shift up by another head length
             if head_starts_at_zero:
-                left_half_arrow += [head_length / 2.0, 0]
+                left_half_arrow += [head_length / 2, 0]
             # figure out the shape, and complete accordingly
             if shape == 'left':
                 coords = left_half_arrow
@@ -1253,15 +1262,15 @@ class FancyArrow(Polygon):
                 else:
                     raise ValueError("Got unknown shape: %s" % shape)
             if distance != 0:
-                cx = float(dx) / distance
-                sx = float(dy) / distance
+                cx = dx / distance
+                sx = dy / distance
             else:
-                #Account for division by zero
+                # Account for division by zero
                 cx, sx = 0, 1
-            M = np.array([[cx, sx], [-sx, cx]])
+            M = [[cx, sx], [-sx, cx]]
             verts = np.dot(coords, M) + (x + dx, y + dy)
 
-        Polygon.__init__(self, list(map(tuple, verts)), closed=True, **kwargs)
+        super().__init__(verts, closed=True, **kwargs)
 
 
 docstring.interpd.update({"FancyArrow": FancyArrow.__init__.__doc__})
@@ -1338,7 +1347,7 @@ class YAArrow(Patch):
         xs = self.convert_xunits([xb1, xb2, xc2, xd2, x1, xd1, xc1, xb1])
         ys = self.convert_yunits([yb1, yb2, yc2, yd2, y1, yd1, yc1, yb1])
 
-        return Path(list(zip(xs, ys)), closed=True)
+        return Path(np.column_stack([xs, ys]), closed=True)
 
     def get_patch_transform(self):
         return transforms.IdentityTransform()
@@ -1376,7 +1385,8 @@ class CirclePolygon(RegularPolygon):
     A polygon-approximation of a circle patch.
     """
     def __str__(self):
-        return "CirclePolygon(%d,%d)" % self.center
+        s = "CirclePolygon((%g, %g), radius=%g, resolution=%d)"
+        return s % (self._xy[0], self._xy[1], self._radius, self._numVertices)
 
     @docstring.dedent_interpd
     def __init__(self, xy, radius=5,
@@ -1404,7 +1414,7 @@ class Ellipse(Patch):
     A scale-free ellipse.
     """
     def __str__(self):
-        pars = (self.center[0], self.center[1],
+        pars = (self._center[0], self._center[1],
                 self.width, self.height, self.angle)
         fmt = "Ellipse(xy=(%s, %s), width=%s, height=%s, angle=%s)"
         return fmt % pars
@@ -1429,7 +1439,7 @@ class Ellipse(Patch):
         """
         Patch.__init__(self, **kwargs)
 
-        self.center = xy
+        self._center = xy
         self.width, self.height = width, height
         self.angle = angle
         self._path = Path.unit_circle()
@@ -1442,8 +1452,8 @@ class Ellipse(Patch):
                  makes it very important to call the accessor method and
                  not directly access the transformation member variable.
         """
-        center = (self.convert_xunits(self.center[0]),
-                  self.convert_yunits(self.center[1]))
+        center = (self.convert_xunits(self._center[0]),
+                  self.convert_yunits(self._center[1]))
         width = self.convert_xunits(self.width)
         height = self.convert_yunits(self.height)
         self._patch_transform = transforms.Affine2D() \
@@ -1461,6 +1471,23 @@ class Ellipse(Patch):
         self._recompute_transform()
         return self._patch_transform
 
+    def set_center(self, xy):
+        """
+        Set the center of the ellipse
+
+        ACCEPTS: (x, y)
+        """
+        self._center = xy
+        self.stale = True
+
+    def get_center(self):
+        """
+        Return the center of the ellipse
+        """
+        return self._center
+
+    center = property(get_center, set_center)
+
 
 class Circle(Ellipse):
     """
@@ -1476,7 +1503,7 @@ class Circle(Ellipse):
         """
         Create true circle at center *xy* = (*x*, *y*) with given
         *radius*.  Unlike :class:`~matplotlib.patches.CirclePolygon`
-        which is a polygonal approximation, this uses Bézier splines
+        which is a polygonal approximation, this uses Bezier splines
         and is much closer to a scale-free circle.
 
         Valid kwargs are:
@@ -1496,7 +1523,9 @@ class Circle(Ellipse):
         self.stale = True
 
     def get_radius(self):
-        'return the radius of the circle'
+        """
+        Return the radius of the circle
+        """
         return self.width / 2.
 
     radius = property(get_radius, set_radius)
@@ -1560,7 +1589,7 @@ class Arc(Ellipse):
         self.theta1 = theta1
         self.theta2 = theta2
 
-    @allow_rasterization
+    @artist.allow_rasterization
     def draw(self, renderer):
         """
         Ellipses are normally drawn using an approximation that uses
@@ -1672,7 +1701,7 @@ class Arc(Ellipse):
             x1e += epsilon
             y1e += epsilon
             for x, y in iter_circle_intersect_on_line(x0, y0, x1, y1):
-                if x >= x0e and x <= x1e and y >= y0e and y <= y1e:
+                if x0e <= x <= x1e and y0e <= y <= y1e:
                     yield x, y
 
         # Transforms the axes box_path so that it is relative to the unit
@@ -1961,7 +1990,7 @@ class BoxStyle(_Style):
             """
             initializtion.
             """
-            super(BoxStyle._Base, self).__init__()
+            super().__init__()
 
         def transmute(self, x0, y0, width, height, mutation_size):
             """
@@ -1999,15 +2028,6 @@ class BoxStyle(_Style):
             else:
                 return self.transmute(x0, y0, width, height, mutation_size)
 
-        def __reduce__(self):
-            # because we have decided to nest thes classes, we need to
-            # add some more information to allow instance pickling.
-            import matplotlib.cbook as cbook
-            return (cbook._NestedClassGetter(),
-                    (BoxStyle, self.__class__.__name__),
-                    self.__dict__
-                    )
-
     class Square(_Base):
         """
         A simple square box.
@@ -2020,7 +2040,7 @@ class BoxStyle(_Style):
             """
 
             self.pad = pad
-            super(BoxStyle.Square, self).__init__()
+            super().__init__()
 
         def transmute(self, x0, y0, width, height, mutation_size):
             pad = mutation_size * self.pad
@@ -2048,7 +2068,7 @@ class BoxStyle(_Style):
                 The amount of padding around the original box.
             """
             self.pad = pad
-            super(BoxStyle.Circle, self).__init__()
+            super().__init__()
 
         def transmute(self, x0, y0, width, height, mutation_size):
             pad = mutation_size * self.pad
@@ -2067,7 +2087,7 @@ class BoxStyle(_Style):
         """
         def __init__(self, pad=0.3):
             self.pad = pad
-            super(BoxStyle.LArrow, self).__init__()
+            super().__init__()
 
         def transmute(self, x0, y0, width, height, mutation_size):
             # padding
@@ -2105,7 +2125,7 @@ class BoxStyle(_Style):
         """
 
         def __init__(self, pad=0.3):
-            super(BoxStyle.RArrow, self).__init__(pad)
+            super().__init__(pad)
 
         def transmute(self, x0, y0, width, height, mutation_size):
 
@@ -2127,7 +2147,7 @@ class BoxStyle(_Style):
 
         def __init__(self, pad=0.3):
             self.pad = pad
-            super(BoxStyle.DArrow, self).__init__()
+            super().__init__()
 
         def transmute(self, x0, y0, width, height, mutation_size):
 
@@ -2184,7 +2204,7 @@ class BoxStyle(_Style):
             """
             self.pad = pad
             self.rounding_size = rounding_size
-            super(BoxStyle.Round, self).__init__()
+            super().__init__()
 
         def transmute(self, x0, y0, width, height, mutation_size):
 
@@ -2248,7 +2268,7 @@ class BoxStyle(_Style):
 
             self.pad = pad
             self.rounding_size = rounding_size
-            super(BoxStyle.Round4, self).__init__()
+            super().__init__()
 
         def transmute(self, x0, y0, width, height, mutation_size):
 
@@ -2302,7 +2322,7 @@ class BoxStyle(_Style):
             """
             self.pad = pad
             self.tooth_size = tooth_size
-            super(BoxStyle.Sawtooth, self).__init__()
+            super().__init__()
 
         def _get_sawtooth_vertices(self, x0, y0, width, height, mutation_size):
 
@@ -2329,66 +2349,56 @@ class BoxStyle(_Style):
             x0, y0 = x0 - pad + tooth_size2, y0 - pad + tooth_size2
             x1, y1 = x0 + width, y0 + height
 
-            bottom_saw_x = [x0] + \
-                           [x0 + tooth_size2 + dsx * .5 * i
-                            for i
-                            in range(dsx_n * 2)] + \
-                           [x1 - tooth_size2]
+            bottom_saw_x = [
+                x0,
+                *(x0 + tooth_size2 + dsx * .5 * np.arange(dsx_n * 2)),
+                x1 - tooth_size2,
+            ]
+            bottom_saw_y = [
+                y0,
+                *([y0 - tooth_size2, y0, y0 + tooth_size2, y0] * dsx_n),
+                y0 - tooth_size2,
+            ]
+            right_saw_x = [
+                x1,
+                *([x1 + tooth_size2, x1, x1 - tooth_size2, x1] * dsx_n),
+                x1 + tooth_size2,
+            ]
+            right_saw_y = [
+                y0,
+                *(y0 + tooth_size2 + dsy * .5 * np.arange(dsy_n * 2)),
+                y1 - tooth_size2,
+            ]
+            top_saw_x = [
+                x1,
+                *(x1 - tooth_size2 - dsx * .5 * np.arange(dsx_n * 2)),
+                x0 + tooth_size2,
+            ]
+            top_saw_y = [
+                y1,
+                *([y1 + tooth_size2, y1, y1 - tooth_size2, y1] * dsx_n),
+                y1 + tooth_size2,
+            ]
+            left_saw_x = [
+                x0,
+                *([x0 - tooth_size2, x0, x0 + tooth_size2, x0] * dsy_n),
+                x0 - tooth_size2,
+            ]
+            left_saw_y = [
+                y1,
+                *(y1 - tooth_size2 - dsy * .5 * np.arange(dsy_n * 2)),
+                y0 + tooth_size2,
+            ]
 
-            bottom_saw_y = [y0] + \
-                           [y0 - tooth_size2, y0,
-                            y0 + tooth_size2, y0] * dsx_n + \
-                           [y0 - tooth_size2]
-
-            right_saw_x = [x1] + \
-                          [x1 + tooth_size2,
-                           x1,
-                           x1 - tooth_size2,
-                           x1] * dsx_n + \
-                          [x1 + tooth_size2]
-
-            right_saw_y = [y0] + \
-                          [y0 + tooth_size2 + dsy * .5 * i
-                           for i
-                           in range(dsy_n * 2)] + \
-                          [y1 - tooth_size2]
-
-            top_saw_x = [x1] + \
-                        [x1 - tooth_size2 - dsx * .5 * i
-                         for i
-                         in range(dsx_n * 2)] + \
-                        [x0 + tooth_size2]
-
-            top_saw_y = [y1] + \
-                        [y1 + tooth_size2,
-                         y1,
-                         y1 - tooth_size2,
-                         y1] * dsx_n + \
-                        [y1 + tooth_size2]
-
-            left_saw_x = [x0] + \
-                         [x0 - tooth_size2,
-                          x0,
-                          x0 + tooth_size2,
-                          x0] * dsy_n + \
-                         [x0 - tooth_size2]
-
-            left_saw_y = [y1] + \
-                         [y1 - tooth_size2 - dsy * .5 * i
-                          for i
-                          in range(dsy_n * 2)] + \
-                         [y0 + tooth_size2]
-
-            saw_vertices = (list(zip(bottom_saw_x, bottom_saw_y)) +
-                            list(zip(right_saw_x, right_saw_y)) +
-                            list(zip(top_saw_x, top_saw_y)) +
-                            list(zip(left_saw_x, left_saw_y)) +
-                            [(bottom_saw_x[0], bottom_saw_y[0])])
+            saw_vertices = [*zip(bottom_saw_x, bottom_saw_y),
+                            *zip(right_saw_x, right_saw_y),
+                            *zip(top_saw_x, top_saw_y),
+                            *zip(left_saw_x, left_saw_y),
+                            (bottom_saw_x[0], bottom_saw_y[0])]
 
             return saw_vertices
 
         def transmute(self, x0, y0, width, height, mutation_size):
-
             saw_vertices = self._get_sawtooth_vertices(x0, y0, width,
                                                        height, mutation_size)
             path = Path(saw_vertices, closed=True)
@@ -2406,7 +2416,7 @@ class BoxStyle(_Style):
             *tooth_size*
               size of the sawtooth. pad* if None
             """
-            super(BoxStyle.Roundtooth, self).__init__(pad, tooth_size)
+            super().__init__(pad, tooth_size)
 
         def transmute(self, x0, y0, width, height, mutation_size):
             saw_vertices = self._get_sawtooth_vertices(x0, y0,
@@ -2446,9 +2456,8 @@ class FancyBboxPatch(Patch):
     _edge_default = True
 
     def __str__(self):
-        return self.__class__.__name__ \
-                           + "(%g,%g;%gx%g)" % (self._x, self._y,
-                                                self._width, self._height)
+        s = self.__class__.__name__ + "((%g, %g), width=%g, height=%g)"
+        return s % (self._x, self._y, self._width, self._height)
 
     @docstring.dedent_interpd
     def __init__(self, xy, width, height,
@@ -2637,7 +2646,7 @@ class FancyBboxPatch(Patch):
 
         ACCEPTS: (left, bottom, width, height)
         """
-        if len(args) == 0:
+        if len(args) == 1:
             l, b, w, h = args[0]
         else:
             l, b, w, h = args
@@ -2786,19 +2795,10 @@ class ConnectionStyle(_Style):
 
             return shrunk_path
 
-        def __reduce__(self):
-            # because we have decided to nest these classes, we need to
-            # add some more information to allow instance pickling.
-            import matplotlib.cbook as cbook
-            return (cbook._NestedClassGetter(),
-                    (ConnectionStyle, self.__class__.__name__),
-                    self.__dict__
-                    )
-
     class Arc3(_Base):
         """
         Creates a simple quadratic bezier curve between two
-        points. The curve is created so that the middle contol points
+        points. The curve is created so that the middle control point
         (C1) is located at the same distance from the start (C0) and
         end points(C2) and the distance of the C1 to the line
         connecting C0-C2 is *rad* times the distance of C0-C2.
@@ -3179,9 +3179,6 @@ class ArrowStyle(_Style):
         # w/o arguments, i.e., all its argument (except self) must have
         # the default values.
 
-        def __init__(self):
-            super(ArrowStyle._Base, self).__init__()
-
         @staticmethod
         def ensure_quadratic_bezier(path):
             """ Some ArrowStyle class only wokrs with a simple
@@ -3191,12 +3188,11 @@ class ArrowStyle(_Style):
             its control points if true.
             """
             segments = list(path.iter_segments())
-            if ((len(segments) != 2) or (segments[0][1] != Path.MOVETO) or
-                    (segments[1][1] != Path.CURVE3)):
-                msg = "'path' it's not a valid quadratic bezier curve"
-                raise ValueError(msg)
-
-            return list(segments[0][0]) + list(segments[1][0])
+            if (len(segments) != 2 or segments[0][1] != Path.MOVETO or
+                    segments[1][1] != Path.CURVE3):
+                raise ValueError(
+                    "'path' is not a valid quadratic Bezier curve")
+            return [*segments[0][0], *segments[1][0]]
 
         def transmute(self, path, mutation_size, linewidth):
             """
@@ -3247,15 +3243,6 @@ class ArrowStyle(_Style):
             else:
                 return self.transmute(path, mutation_size, linewidth)
 
-        def __reduce__(self):
-            # because we have decided to nest thes classes, we need to
-            # add some more information to allow instance pickling.
-            import matplotlib.cbook as cbook
-            return (cbook._NestedClassGetter(),
-                    (ArrowStyle, self.__class__.__name__),
-                    self.__dict__
-                    )
-
     class _Curve(_Base):
         """
         A simple arrow which will work with any path instance. The
@@ -3277,7 +3264,7 @@ class ArrowStyle(_Style):
             self.beginarrow, self.endarrow = beginarrow, endarrow
             self.head_length, self.head_width = head_length, head_width
             self.fillbegin, self.fillend = fillbegin, fillend
-            super(ArrowStyle._Curve, self).__init__()
+            super().__init__()
 
         def _get_arrow_wedge(self, x0, y0, x1, y1,
                              head_dist, cos_t, sin_t, linewidth
@@ -3397,8 +3384,7 @@ class ArrowStyle(_Style):
         """
 
         def __init__(self):
-            super(ArrowStyle.Curve, self).__init__(
-                beginarrow=False, endarrow=False)
+            super().__init__(beginarrow=False, endarrow=False)
 
     _style_list["-"] = Curve
 
@@ -3418,9 +3404,8 @@ class ArrowStyle(_Style):
                 Width of the arrow head
             """
 
-            super(ArrowStyle.CurveA, self).__init__(
-                  beginarrow=True, endarrow=False,
-                  head_length=head_length, head_width=head_width)
+            super().__init__(beginarrow=True, endarrow=False,
+                             head_length=head_length, head_width=head_width)
 
     _style_list["<-"] = CurveA
 
@@ -3440,9 +3425,8 @@ class ArrowStyle(_Style):
                 Width of the arrow head
             """
 
-            super(ArrowStyle.CurveB, self).__init__(
-                beginarrow=False, endarrow=True,
-                head_length=head_length, head_width=head_width)
+            super().__init__(beginarrow=False, endarrow=True,
+                             head_length=head_length, head_width=head_width)
 
     _style_list["->"] = CurveB
 
@@ -3462,9 +3446,8 @@ class ArrowStyle(_Style):
                 Width of the arrow head
             """
 
-            super(ArrowStyle.CurveAB, self).__init__(
-                beginarrow=True, endarrow=True,
-                head_length=head_length, head_width=head_width)
+            super().__init__(beginarrow=True, endarrow=True,
+                             head_length=head_length, head_width=head_width)
 
     _style_list["<->"] = CurveAB
 
@@ -3484,10 +3467,9 @@ class ArrowStyle(_Style):
                 Width of the arrow head
             """
 
-            super(ArrowStyle.CurveFilledA, self).__init__(
-                beginarrow=True, endarrow=False,
-                fillbegin=True, fillend=False,
-                head_length=head_length, head_width=head_width)
+            super().__init__(beginarrow=True, endarrow=False,
+                             fillbegin=True, fillend=False,
+                             head_length=head_length, head_width=head_width)
 
     _style_list["<|-"] = CurveFilledA
 
@@ -3507,10 +3489,9 @@ class ArrowStyle(_Style):
                 Width of the arrow head
             """
 
-            super(ArrowStyle.CurveFilledB, self).__init__(
-                beginarrow=False, endarrow=True,
-                fillbegin=False, fillend=True,
-                head_length=head_length, head_width=head_width)
+            super().__init__(beginarrow=False, endarrow=True,
+                             fillbegin=False, fillend=True,
+                             head_length=head_length, head_width=head_width)
 
     _style_list["-|>"] = CurveFilledB
 
@@ -3530,10 +3511,9 @@ class ArrowStyle(_Style):
                 Width of the arrow head
             """
 
-            super(ArrowStyle.CurveFilledAB, self).__init__(
-                beginarrow=True, endarrow=True,
-                fillbegin=True, fillend=True,
-                head_length=head_length, head_width=head_width)
+            super().__init__(beginarrow=True, endarrow=True,
+                             fillbegin=True, fillend=True,
+                             head_length=head_length, head_width=head_width)
 
     _style_list["<|-|>"] = CurveFilledAB
 
@@ -3644,10 +3624,9 @@ class ArrowStyle(_Style):
                 Angle between the bracket and the line
             """
 
-            super(ArrowStyle.BracketAB, self).__init__(
-                        True, True, widthA=widthA, lengthA=lengthA,
-                        angleA=angleA, widthB=widthB, lengthB=lengthB,
-                        angleB=angleB)
+            super().__init__(True, True,
+                             widthA=widthA, lengthA=lengthA, angleA=angleA,
+                             widthB=widthB, lengthB=lengthB, angleB=angleB)
 
     _style_list["]-["] = BracketAB
 
@@ -3670,10 +3649,8 @@ class ArrowStyle(_Style):
                 Angle between the bracket and the line
             """
 
-            super(ArrowStyle.BracketA, self).__init__(True, None,
-                                                      widthA=widthA,
-                                                      lengthA=lengthA,
-                                                      angleA=angleA)
+            super().__init__(True, None,
+                             widthA=widthA, lengthA=lengthA, angleA=angleA)
 
     _style_list["]-"] = BracketA
 
@@ -3696,10 +3673,8 @@ class ArrowStyle(_Style):
                 Angle between the bracket and the line
             """
 
-            super(ArrowStyle.BracketB, self).__init__(None, True,
-                                                      widthB=widthB,
-                                                      lengthB=lengthB,
-                                                      angleB=angleB)
+            super().__init__(None, True,
+                             widthB=widthB, lengthB=lengthB, angleB=angleB)
 
     _style_list["-["] = BracketB
 
@@ -3727,9 +3702,9 @@ class ArrowStyle(_Style):
                 Angle between the bracket and the line
             """
 
-            super(ArrowStyle.BarAB, self).__init__(
-                        True, True, widthA=widthA, lengthA=0, angleA=angleA,
-                        widthB=widthB, lengthB=0, angleB=angleB)
+            super().__init__(True, True,
+                             widthA=widthA, lengthA=0, angleA=angleA,
+                             widthB=widthB, lengthB=0, angleB=angleB)
 
     _style_list["|-|"] = BarAB
 
@@ -3754,7 +3729,7 @@ class ArrowStyle(_Style):
 
             self.head_length, self.head_width, self.tail_width = \
                 head_length, head_width, tail_width
-            super(ArrowStyle.Simple, self).__init__()
+            super().__init__()
 
         def transmute(self, path, mutation_size, linewidth):
 
@@ -3841,7 +3816,7 @@ class ArrowStyle(_Style):
 
             self.head_length, self.head_width, self.tail_width = \
                 head_length, head_width, tail_width
-            super(ArrowStyle.Fancy, self).__init__()
+            super().__init__()
 
         def transmute(self, path, mutation_size, linewidth):
 
@@ -3943,7 +3918,7 @@ class ArrowStyle(_Style):
 
             self.tail_width = tail_width
             self.shrink_factor = shrink_factor
-            super(ArrowStyle.Wedge, self).__init__()
+            super().__init__()
 
         def transmute(self, path, mutation_size, linewidth):
 
@@ -3995,7 +3970,7 @@ class FancyArrowPatch(Patch):
         if self._posA_posB is not None:
             (x1, y1), (x2, y2) = self._posA_posB
             return self.__class__.__name__ \
-                + "(%g,%g->%g,%g)" % (x1, y1, x2, y2)
+                + "((%g, %g)->(%g, %g))" % (x1, y1, x2, y2)
         else:
             return self.__class__.__name__ \
                 + "(%s)" % (str(self._path_original),)
@@ -4403,7 +4378,7 @@ class ConnectionPatch(FancyArrowPatch):
     connecting lines between two points (possibly in different axes).
     """
     def __str__(self):
-        return "ConnectionPatch((%g,%g),(%g,%g))" % \
+        return "ConnectionPatch((%g, %g), (%g, %g))" % \
                (self.xy1[0], self.xy1[1], self.xy2[0], self.xy2[1])
 
     @docstring.dedent_interpd
@@ -4502,7 +4477,7 @@ class ConnectionPatch(FancyArrowPatch):
 
     def _get_xy(self, x, y, s, axes=None):
         """
-        caculate the pixel position of given point
+        calculate the pixel position of given point
         """
 
         if axes is None:

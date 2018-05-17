@@ -1,12 +1,10 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
+from collections import OrderedDict
+from contextlib import contextmanager
+import gc
 import os
 import shutil
 import tempfile
 import warnings
-from collections import OrderedDict
-from contextlib import contextmanager
 
 import pytest
 
@@ -45,9 +43,9 @@ def temp_style(style_name, settings=None):
         style.reload_library()
 
 
-def test_deprecated_rc_warning_includes_filename():
-    SETTINGS = {'axes.color_cycle': 'ffffff'}
-    basename = 'color_cycle'
+def test_invalid_rc_warning_includes_filename():
+    SETTINGS = {'foo': 'bar'}
+    basename = 'basename'
     with warnings.catch_warnings(record=True) as warns:
         with temp_style(basename, SETTINGS):
             # style.reload_library() in temp_style() triggers the warning
@@ -163,6 +161,8 @@ def test_alias(equiv_styles):
 def test_xkcd_no_cm():
     assert mpl.rcParams["path.sketch"] is None
     plt.xkcd()
+    assert mpl.rcParams["path.sketch"] == (1, 100, 2)
+    gc.collect()
     assert mpl.rcParams["path.sketch"] == (1, 100, 2)
 
 

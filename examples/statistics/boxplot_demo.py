@@ -23,7 +23,7 @@ spread = np.random.rand(50) * 100
 center = np.ones(25) * 50
 flier_high = np.random.rand(10) * 100 + 100
 flier_low = np.random.rand(10) * -100
-data = np.concatenate((spread, center, flier_high, flier_low), 0)
+data = np.concatenate((spread, center, flier_high, flier_low))
 
 fig, axs = plt.subplots(2, 3)
 
@@ -59,7 +59,7 @@ spread = np.random.rand(50) * 100
 center = np.ones(25) * 40
 flier_high = np.random.rand(10) * 100 + 100
 flier_low = np.random.rand(10) * -100
-d2 = np.concatenate((spread, center, flier_high, flier_low), 0)
+d2 = np.concatenate((spread, center, flier_high, flier_low))
 data.shape = (-1, 1)
 d2.shape = (-1, 1)
 # Making a 2-D array only works if all the columns are the
@@ -136,7 +136,7 @@ for i in range(numBoxes):
     for j in range(5):
         boxX.append(box.get_xdata()[j])
         boxY.append(box.get_ydata()[j])
-    boxCoords = list(zip(boxX, boxY))
+    boxCoords = np.column_stack([boxX, boxY])
     # Alternate between Dark Khaki and Royal Blue
     k = i % 2
     boxPolygon = Polygon(boxCoords, facecolor=boxColors[k])

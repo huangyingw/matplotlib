@@ -1,6 +1,3 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import six
 
 import io
@@ -10,13 +7,14 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 import pytest
 
-from matplotlib.transforms import Bbox
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.testing.decorators import image_comparison
-from matplotlib.figure import Figure
-from matplotlib.text import Annotation, Text
-from matplotlib.backends.backend_agg import RendererAgg
+
+
+needs_usetex = pytest.mark.xfail(
+    not matplotlib.checkdep_usetex(True),
+    reason="This test needs a TeX installation")
 
 
 @image_comparison(baseline_images=['font_styles'])
@@ -464,3 +462,42 @@ def test_hinting_factor_backends():
     # Backends should apply hinting_factor consistently (within 10%).
     np.testing.assert_allclose(t.get_window_extent().intervalx, expected,
                                rtol=0.1)
+
+
+@needs_usetex
+def test_single_artist_usetex():
+    # Check that a single artist marked with usetex does not get passed through
+    # the mathtext parser at all (for the Agg backend) (the mathtext parser
+    # currently fails to parse \frac12, requiring \frac{1}{2} instead).
+    fig, ax = plt.subplots()
+    ax.text(.5, .5, r"$\frac12$", usetex=True)
+    fig.canvas.draw()
+
+
+@image_comparison(baseline_images=['text_as_path_opacity'],
+                  extensions=['svg'])
+def test_text_as_path_opacity():
+    plt.figure()
+    plt.gca().set_axis_off()
+    plt.text(0.25, 0.25, 'c', color=(0, 0, 0, 0.5))
+    plt.text(0.25, 0.5, 'a', alpha=0.5)
+    plt.text(0.25, 0.75, 'x', alpha=0.5, color=(0, 0, 0, 1))
+
+
+@image_comparison(baseline_images=['text_as_text_opacity'],
+                  extensions=['svg'])
+def test_text_as_text_opacity():
+    matplotlib.rcParams['svg.fonttype'] = 'none'
+    plt.figure()
+    plt.gca().set_axis_off()
+    plt.text(0.25, 0.25, '50% using `color`', color=(0, 0, 0, 0.5))
+    plt.text(0.25, 0.5, '50% using `alpha`', alpha=0.5)
+    plt.text(0.25, 0.75, '50% using `alpha` and 100% `color`', alpha=0.5,
+             color=(0, 0, 0, 1))
+
+
+def test_text_repr():
+    # smoketest to make sure text repr doesn't error for category
+    plt.plot(['A', 'B'], [1, 2])
+    txt = plt.text(['A'], 0.5, 'Boo')
+    print(txt)

@@ -1,4 +1,4 @@
-# This file is coppied from https://github.com/jbmohler/matplotlib-winbuild
+# This file is copied from https://github.com/jbmohler/matplotlib-winbuild
 # Only the needed functions were kept.
 """
 This file extracts and builds library dependencies libpng, zlib, & freetype2 on
@@ -19,7 +19,6 @@ For Python 3.3, 3.4:
 - VS 2010, 64 bit -- Windows SDK v7.1
 """
 
-from __future__ import print_function, absolute_import
 import sys
 import platform
 import os
@@ -48,7 +47,8 @@ def zip_extract(zip_file, target):
         zf.extractall(target)
 
 # Configuration selection & declaration:
-DEPSSRC = os.path.join(os.path.dirname(os.path.normpath(__file__)), 'deps_source')
+DEPSSRC = os.path.join(os.path.dirname(os.path.normpath(__file__)),
+                       'deps_source')
 DEPSBUILD = os.path.join(os.path.dirname(os.path.normpath(__file__)), 'build')
 X64 = platform.architecture()[0] == '64bit'
 PYVER = sys.version_info[:2]
@@ -62,8 +62,10 @@ def prepare_build_cmd(build_cmd, **kwargs):
     if VCVARSALL == None:
         candidate = msvc.find_vcvarsall(10.0 if VS2010 else 9.0)
         if candidate == None:
-            raise RuntimeError('Microsoft VS {} required'.format('2010' if VS2010 else '2008'))
+            raise RuntimeError('Microsoft VS {} required'
+                               .format('2010' if VS2010 else '2008'))
         else:
             VCVARSALL = candidate
 
-    return build_cmd.format(vcvarsall=VCVARSALL, xXX='x64' if X64 else 'x86', **kwargs)
+    return build_cmd.format(
+        vcvarsall=VCVARSALL, xXX='x64' if X64 else 'x86', **kwargs)

@@ -2,7 +2,6 @@
 
 import filecmp
 from os.path import join as pjoin, dirname, isdir
-import shutil
 from subprocess import call, Popen, PIPE
 import sys
 
@@ -14,15 +13,6 @@ from matplotlib import cbook
 needs_sphinx = pytest.mark.skipif(
     call([sys.executable, '-msphinx', '--help'], stdout=PIPE, stderr=PIPE),
     reason="'{} -msphinx' does not return 0".format(sys.executable))
-
-
-@cbook.deprecated("2.1", alternative="filecmp.cmp")
-def file_same(file1, file2):
-    with open(file1, 'rb') as fobj:
-        contents1 = fobj.read()
-    with open(file2, 'rb') as fobj:
-        contents2 = fobj.read()
-    return contents1 == contents2
 
 
 def test_tinypages(tmpdir):

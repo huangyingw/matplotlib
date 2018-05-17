@@ -1,13 +1,8 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
 import six
 
-import matplotlib as mpl
+from numbers import Number
+
 import matplotlib.axes as maxes
-import matplotlib.cbook as cbook
-import matplotlib.lines as mlines
-import matplotlib.patches as mpatches
 import matplotlib.ticker as ticker
 from matplotlib.gridspec import SubplotSpec
 
@@ -36,8 +31,7 @@ def _tick_only(ax, bottom_on, left_on):
 
 class CbarAxesBase(object):
 
-    def colorbar(self, mappable, **kwargs):
-        locator = kwargs.pop("locator", None)
+    def colorbar(self, mappable, *, locator=None, **kwargs):
 
         if locator is None:
             if "ticks" not in kwargs:
@@ -49,7 +43,6 @@ class CbarAxesBase(object):
             else:
                 kwargs["ticks"] = locator
 
-        self._hold = True
         if self.orientation in ["top", "bottom"]:
             orientation = "horizontal"
         else:
@@ -59,7 +52,6 @@ class CbarAxesBase(object):
         self._config_axes()
 
         def on_changed(m):
-            #print 'calling on changed', m.get_cmap().name
             cb.set_cmap(m.get_cmap())
             cb.set_clim(m.get_clim())
             cb.update_bruteforce(m)
@@ -111,18 +103,14 @@ class CbarAxesBase(object):
 
 
 class CbarAxes(CbarAxesBase, LocatableAxes):
-    def __init__(self, *kl, **kwargs):
-        orientation = kwargs.pop("orientation", None)
-        if orientation is None:
-            raise ValueError("orientation must be specified")
+    def __init__(self, *args, orientation, **kwargs):
         self.orientation = orientation
         self._default_label_on = True
         self.locator = None
-
-        super(LocatableAxes, self).__init__(*kl, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def cla(self):
-        super(LocatableAxes, self).cla()
+        super().cla()
         self._config_axes()
 
 
@@ -169,10 +157,10 @@ class Grid(object):
           axes_pad          0.02      float| pad between axes given in inches
                                       or tuple-like of floats,
                                       (horizontal padding, vertical padding)
-          add_all           True      [ True | False ]
-          share_all         False     [ True | False ]
-          share_x           True      [ True | False ]
-          share_y           True      [ True | False ]
+          add_all           True      bool
+          share_all         False     bool
+          share_x           True      bool
+          share_y           True      bool
           label_mode        "L"       [ "L" | "1" | "all" ]
           axes_class        None      a type object which must be a subclass
                                       of :class:`~matplotlib.axes.Axes`
@@ -212,7 +200,7 @@ class Grid(object):
 
         h = []
         v = []
-        if isinstance(rect, six.string_types) or cbook.is_numlike(rect):
+        if isinstance(rect, (str, Number)):
             self._divider = SubplotDivider(fig, rect, horizontal=h, vertical=v,
                                            aspect=False)
         elif isinstance(rect, SubplotSpec):
@@ -466,15 +454,15 @@ class ImageGrid(Grid):
           axes_pad          0.02      float| pad between axes given in inches
                                       or tuple-like of floats,
                                       (horizontal padding, vertical padding)
-          add_all           True      [ True | False ]
-          share_all         False     [ True | False ]
-          aspect            True      [ True | False ]
+          add_all           True      bool
+          share_all         False     bool
+          aspect            True      bool
           label_mode        "L"       [ "L" | "1" | "all" ]
           cbar_mode         None      [ "each" | "single" | "edge" ]
           cbar_location     "right"   [ "left" | "right" | "bottom" | "top" ]
           cbar_pad          None
           cbar_size         "5%"
-          cbar_set_cax      True      [ True | False ]
+          cbar_set_cax      True      bool
           axes_class        None      a type object which must be a subclass
                                       of axes_grid's subclass of
                                       :class:`~matplotlib.axes.Axes`
@@ -488,8 +476,8 @@ class ImageGrid(Grid):
         if ngrids is None:
             ngrids = self._nrows * self._ncols
         else:
-            if (ngrids > self._nrows * self._ncols) or (ngrids <= 0):
-                raise Exception("")
+            if not 0 <= ngrids < self._nrows * self._ncols:
+                raise Exception
 
         self.ngrids = ngrids
 
@@ -533,7 +521,7 @@ class ImageGrid(Grid):
 
         h = []
         v = []
-        if isinstance(rect, six.string_types) or cbook.is_numlike(rect):
+        if isinstance(rect, (str, Number)):
             self._divider = SubplotDivider(fig, rect, horizontal=h, vertical=v,
                                            aspect=aspect)
         elif isinstance(rect, SubplotSpec):
@@ -772,4 +760,3 @@ class ImageGrid(Grid):
 
 
 AxesGrid = ImageGrid
-

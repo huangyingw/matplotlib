@@ -9,7 +9,6 @@ Matplotlib's testing infrastructure depends on pytest_. The tests are in
 infrastructure are in :mod:`matplotlib.testing`.
 
 .. _pytest: http://doc.pytest.org/en/latest/
-.. _mock: https://docs.python.org/3/library/unittest.mock.html>
 .. _Ghostscript: https://www.ghostscript.com/
 .. _Inkscape: https://inkscape.org
 .. _pytest-cov: https://pytest-cov.readthedocs.io/en/latest/
@@ -26,14 +25,13 @@ local FreeType build
 
 The following software is required to run the tests:
 
-  - pytest_, version 3.0.0 or later
-  - mock_, when running Python versions < 3.3
+  - pytest_ (>=3.4)
   - Ghostscript_ (to render PDF files)
   - Inkscape_ (to render SVG files)
 
 Optionally you can install:
 
-  - pytest-cov_ to collect coverage information
+  - pytest-cov_ (>=2.3.1) to collect coverage information
   - pytest-pep8_ to test coding standards
   - pytest-timeout_ to limit runtime in case of stuck tests
   - pytest-xdist_ to run tests in parallel
@@ -44,7 +42,7 @@ Running the tests
 
 Running the tests is simple. Make sure you have pytest installed and run::
 
-   py.test
+   pytest
 
 or::
 
@@ -74,22 +72,22 @@ To run a single test from the command line, you can provide a file path,
 optionally followed by the function separated by two colons, e.g., (tests do
 not need to be installed, but Matplotlib should be)::
 
-  py.test lib/matplotlib/tests/test_simplification.py::test_clipping
+  pytest lib/matplotlib/tests/test_simplification.py::test_clipping
 
 or, if tests are installed, a dot-separated path to the module, optionally
 followed by the function separated by two colons, such as::
 
-  py.test --pyargs matplotlib.tests.test_simplification::test_clipping
+  pytest --pyargs matplotlib.tests.test_simplification::test_clipping
 
 If you want to run the full test suite, but want to save wall time try
 running the tests in parallel::
 
-  py.test --verbose -n 5
+  pytest --verbose -n 5
 
 Depending on your version of Python and pytest-xdist, you may need to set
 ``PYTHONHASHSEED`` to a fixed value when running in parallel::
 
-  PYTHONHASHSEED=0 py.test --verbose -n 5
+  PYTHONHASHSEED=0 pytest --verbose -n 5
 
 An alternative implementation that does not look at command line arguments
 and works from within Python is to run the tests from the Matplotlib library

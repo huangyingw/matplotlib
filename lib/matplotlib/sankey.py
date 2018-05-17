@@ -1,15 +1,13 @@
 """
 Module for creating Sankey diagrams using matplotlib
 """
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
 
-import six
 import logging
-from six.moves import zip
+from types import SimpleNamespace
+
 import numpy as np
 
-from matplotlib.cbook import iterable, Bunch
+from matplotlib.cbook import iterable
 from matplotlib.path import Path
 from matplotlib.patches import PathPatch
 from matplotlib.transforms import Affine2D
@@ -704,7 +702,7 @@ class Sankey(object):
                 [(Path.CLOSEPOLY, urpath[0][1])])
 
         # Create a patch with the Sankey outline.
-        codes, vertices = list(zip(*path))
+        codes, vertices = zip(*path)
         vertices = np.array(vertices)
 
         def _get_angle(a, r):
@@ -734,13 +732,6 @@ class Sankey(object):
             vertices = translate(rotate(vertices))
             kwds = dict(s=patchlabel, ha='center', va='center')
             text = self.ax.text(*offset, **kwds)
-        if False:  # Debug
-            print("llpath\n", llpath)
-            print("ulpath\n", self._revert(ulpath))
-            print("urpath\n", urpath)
-            print("lrpath\n", self._revert(lrpath))
-            xs, ys = list(zip(*vertices))
-            self.ax.plot(xs, ys, 'go-')
         if rcParams['_internal.classic_mode']:
             fc = kwargs.pop('fc', kwargs.pop('facecolor', '#bfd1d4'))
             lw = kwargs.pop('lw', kwargs.pop('linewidth', 0.5))
@@ -748,7 +739,7 @@ class Sankey(object):
             fc = kwargs.pop('fc', kwargs.pop('facecolor', None))
             lw = kwargs.pop('lw', kwargs.pop('linewidth', None))
         if fc is None:
-            fc = six.next(self.ax._get_patches_for_fill.prop_cycler)['color']
+            fc = next(self.ax._get_patches_for_fill.prop_cycler)['color']
         patch = PathPatch(Path(vertices, codes), fc=fc, lw=lw, **kwargs)
         self.ax.add_patch(patch)
 
@@ -787,8 +778,9 @@ class Sankey(object):
         # where either could determine the margins (e.g., arrow shoulders).
 
         # Add this diagram as a subdiagram.
-        self.diagrams.append(Bunch(patch=patch, flows=flows, angles=angles,
-                                   tips=tips, text=text, texts=texts))
+        self.diagrams.append(
+            SimpleNamespace(patch=patch, flows=flows, angles=angles, tips=tips,
+                            text=text, texts=texts))
 
         # Allow a daisy-chained call structure (see docstring for the class).
         return self
